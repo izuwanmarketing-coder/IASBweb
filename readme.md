@@ -1,75 +1,76 @@
-# IZUWAN Automobile Website
+# Izuwan Automobile Website
 
-Website multi-page untuk Izuwan Automobile, lengkap dengan inventory, kalkulator kelayakan, breakdown OTR, profil syarikat, contact dan admin panel.
+Static production website for Izuwan Automobile, ready for GitHub + Cloudflare Pages.
 
-## Halaman
+## Deploy target
 
-- `index.html` — Home / muka depan
-- `inventory.html` — Senarai stok dan gambar
-- `select-programme.html` — Custom sourcing daripada auction Jepun
-- `calculator.html` — Kalkulator kelayakan dan ansuran
-- `otr.html` — Breakdown harga OTR dan downpayment
-- `about.html` — Our Profile / Our Story
-- `contact.html` — WhatsApp dan senarai sales advisor
-- `admin.html` — Pengurusan inventory dan tetapan
+- Hosting: Cloudflare Pages
+- Framework preset: None
+- Build command: leave blank
+- Build output directory: `/`
+- Production branch: `main`
 
-## Jalankan
+## Main pages
 
-Buka `index.html` terus dalam browser, atau jalankan server QA yang disertakan:
+- `index.html` — homepage
+- `inventory.html` — ready stock inventory
+- `events.html` — active events and campaigns
+- `select-programme.html` — Japan sourcing programme
+- `calculator.html` — loan / affordability calculator
+- `otr.html` — OTR calculator
+- `about.html` — company profile and story
+- `contact.html` — HQ, WhatsApp and sales advisors
+- `admin.html` — protected admin panel by direct URL
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\dev-server.ps1
+## Admin and database
+
+The public website is static. Dynamic inventory, sales advisor, event banner and site settings are powered by Supabase.
+
+Before using the latest admin features, open Supabase SQL Editor and run:
+
+```text
+supabase-schema.sql
 ```
 
-Kemudian buka `http://localhost:4173`.
-
-## Nota formula
-
-- DSR maksimum = gaji bersih × had DSR
-- Bajet ansuran = DSR maksimum − komitmen bulanan
-- Pinjaman menggunakan anggaran kadar faedah flat hire purchase
-- Semua hasil ialah anggaran awal, bukan jaminan kelulusan bank
-- Quotation PDF boleh dijana terus daripada breakdown OTR tanpa database
-
-## Admin panel
-
-Admin panel tersedia di:
+Admin route:
 
 ```text
 /admin.html
 ```
 
-### Sambungkan Supabase
+Supabase connection is configured in:
 
-1. Create project baru di Supabase.
-2. Buka **SQL Editor** dan jalankan seluruh kandungan `supabase-schema.sql`.
-3. Buka **Authentication > Users** dan create seorang admin user.
-4. Copy UUID user tersebut, kemudian jalankan:
-
-```sql
-insert into public.admin_users (user_id)
-values ('PASTE-USER-UUID-HERE');
+```text
+config.js
 ```
 
-5. Buka **Project Settings > API** dan copy Project URL serta publishable/anon key.
-6. Isi kedua-duanya dalam `config.js`:
+The Supabase publishable key is safe to be public. Do not commit private service-role keys.
 
-```js
-window.IASB_CONFIG = {
-  supabaseUrl: "https://PROJECT.supabase.co",
-  supabaseAnonKey: "PUBLISHABLE-KEY"
-};
+## Cloudflare Pages notes
+
+After uploading this repo to GitHub:
+
+1. Go to Cloudflare Dashboard.
+2. Open Workers & Pages.
+3. Create Pages project.
+4. Connect GitHub repo.
+5. Use the deploy settings above.
+6. Add custom domains:
+   - `izuwanautomobile.com`
+   - `www.izuwanautomobile.com`
+
+Keep email DNS records separate. Do not delete MX, SPF, DKIM, DMARC or GoDaddy email records unless email is intentionally being moved.
+
+## Local preview
+
+Open `index.html` directly in a browser, or run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\dev-server.ps1
 ```
 
-7. Upload semula seluruh folder ke Netlify.
-8. Login di `/admin.html`, kemudian tekan **Import stok asal** sekali.
+Then open:
 
-Admin boleh urus inventory, harga, status, lokasi, caj OTR, logo, promotion banner dan senarai salesman.
-
-## Maklumat syarikat
-
-- Japan Reconditioned Car Specialist sejak 2011
-- Syarikat 100% Bumiputera
-- Main HQ: Izuwan Automobile Sdn. Bhd., Taman Wahyu
-- Alamat: Lot 65419, Jln Kuching, Mukim Batu, 51200 Kuala Lumpur
-- Waktu operasi: 9:00 AM – 7:00 PM
+```text
+http://localhost:4173
+```
