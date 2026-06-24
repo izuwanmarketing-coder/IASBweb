@@ -1,0 +1,211 @@
+﻿<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0c0e">
+  <meta name="robots" content="noindex, nofollow">
+  <title>IASB Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="admin-overrides.css">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="manifest" href="site.webmanifest">
+</head>
+<body>
+  <section class="admin-login" id="loginView">
+    <form class="login-card" id="loginForm">
+      <div class="admin-brand"><span>IA</span><div><b>IZUWAN</b><small>ADMIN PANEL</small></div></div>
+      <h1>Control room.</h1>
+      <p>Login untuk urus stok, harga dan tetapan salesman.</p>
+      <label>Email<input id="loginEmail" type="email" required autocomplete="email"></label>
+      <label>Password<input id="loginPassword" type="password" required autocomplete="current-password"></label>
+      <button type="submit">Login admin</button>
+      <div class="admin-message" id="loginMessage"></div>
+      <small class="setup-warning hidden" id="setupWarning">Supabase belum disambungkan. Isi <code>config.js</code> dahulu.</small>
+    </form>
+  </section>
+
+  <div class="admin-app hidden" id="adminView">
+    <aside class="admin-sidebar">
+      <div class="admin-brand"><span>IA</span><div><b>IZUWAN</b><small>ADMIN PANEL</small></div></div>
+      <nav>
+        <button class="admin-nav active" data-page="dashboard">Overview</button>
+        <button class="admin-nav" data-page="inventory">Inventory</button>
+        <button class="admin-nav" data-page="events">Events</button>
+        <button class="admin-nav" data-page="settings">Site & OTR</button>
+        <button class="admin-nav" data-page="salesmen">Salesmen</button>
+      </nav>
+      <a href="index.html" target="_blank">Buka website ↗</a>
+      <button class="logout-btn" id="logoutButton">Logout</button>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <div><span>IASB MANAGEMENT</span><h1 id="pageTitle">Overview</h1></div>
+        <button class="mobile-menu" id="mobileMenu">Menu</button>
+      </header>
+
+      <section class="admin-page active" data-page-panel="dashboard">
+        <div class="stats-grid">
+          <article><span>Total unit</span><strong id="statUnits">0</strong></article>
+          <article><span>Model aktif</span><strong id="statModels">0</strong></article>
+          <article><span>Incoming</span><strong id="statIncoming">0</strong></article>
+          <article><span>Salesmen</span><strong id="statSalesmen">0</strong></article>
+        </div>
+        <div class="dashboard-grid">
+          <div class="admin-card">
+            <div class="card-title"><div><span>QUICK STATUS</span><h2>Ringkasan inventory</h2></div></div>
+            <div id="overviewBreakdown" class="overview-list"></div>
+          </div>
+          <div class="admin-card">
+            <div class="card-title"><div><span>EVENT STATUS</span><h2>Campaign aktif</h2></div></div>
+            <div id="eventSummary" class="event-summary"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-page" data-page-panel="inventory">
+        <div class="admin-card">
+          <div class="card-title">
+            <div><span>STOCK MANAGEMENT</span><h2>Inventory</h2></div>
+            <div class="header-actions"><button id="importStarterButton">Import stok asal</button><button class="accent-btn" id="addCarButton">+ Tambah stok</button></div>
+          </div>
+          <div class="admin-filters">
+            <input id="adminStockSearch" type="search" placeholder="Cari model, brand, lokasi...">
+            <select id="adminStockStatus"><option value="all">Semua status</option><option>AVAILABLE</option><option>INCOMING</option><option>DONE PAID DUTI</option><option>PORT KLANG</option></select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Model</th><th>Lokasi</th><th>Status</th><th>Harga</th><th>Mileage</th><th>Unit</th><th></th></tr></thead>
+              <tbody id="inventoryTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-page" data-page-panel="events">
+        <div class="admin-card">
+          <div class="card-title">
+            <div><span>CAMPAIGN MANAGEMENT</span><h2>Events & website banner</h2></div>
+            <button class="accent-btn" id="addEventButton">+ Tambah event</button>
+          </div>
+          <p class="admin-help">Guna bahagian ni untuk e-carnival, stock clearance, promo weekend atau campaign sementara. Event aktif akan keluar sebagai banner premium di website public sepanjang tarikh event.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Event</th><th>Duration</th><th>CTA</th><th>Status</th><th></th></tr></thead>
+              <tbody id="eventsTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-page" data-page-panel="settings">
+        <form class="admin-card settings-form" id="settingsForm">
+          <div class="card-title"><div><span>GLOBAL SETTINGS</span><h2>Site & OTR</h2></div><button class="accent-btn" type="submit">Simpan tetapan</button></div>
+          <div class="form-grid">
+            <label>Nama syarikat<input id="settingCompany" required></label>
+            <label>Tarikh pricelist<input id="settingDate" placeholder="22.6.26"></label>
+            <label>Processing fee (RM)<input id="settingProcessing" type="number" min="0"></label>
+            <label>Registration fee default (RM)<input id="settingRegistration" type="number" min="0"></label>
+            <label>Interest default (%)<input id="settingInterest" type="number" min="0" step="0.1"></label>
+            <label>DSR default (%)<input id="settingDsr" type="number" min="30" max="90"></label>
+            <label>Nombor WhatsApp utama<input id="settingWhatsapp" placeholder="60123456789"></label>
+            <label class="wide">Promotion banner<input id="settingBanner" placeholder="Contoh: Promo Raya - free tint!"></label>
+            <label class="wide">Logo syarikat<input id="settingLogo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"></label>
+          </div>
+          <div class="logo-preview" id="logoPreview">Belum ada logo</div>
+        </form>
+      </section>
+
+      <section class="admin-page" data-page-panel="salesmen">
+        <div class="admin-card">
+          <div class="card-title"><div><span>TEAM MANAGEMENT</span><h2>Salesmen</h2></div><button class="accent-btn" id="addSalesmanButton">+ Tambah salesman</button></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nama</th><th>WhatsApp</th><th>Branch</th><th>Status</th><th></th></tr></thead>
+              <tbody id="salesmenTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="carDialog">
+    <form method="dialog" class="dialog-card" id="carForm">
+      <div class="card-title"><div><span>INVENTORY</span><h2 id="carDialogTitle">Tambah stok</h2></div><button class="close-dialog" type="button" data-close-dialog="carDialog">×</button></div>
+      <input id="carId" type="hidden">
+      <div class="form-grid">
+        <label>Brand<input id="carBrand" required></label>
+        <label>Model<input id="carModel" required></label>
+        <label>Tahun<input id="carYear" type="number" min="1990" max="2035" placeholder="2021"></label>
+        <label>Grade<input id="carGrade" placeholder="Contoh: ZG / G / Executive Lounge"></label>
+        <label>Variant / tahun / warna<input id="carVariant"></label>
+        <label>Jenis<select id="carType"><option>MPV</option><option>SUV</option><option>Sedan</option><option>Hatchback</option><option>Coupe</option><option>Convertible</option><option>Other</option></select></label>
+        <label>Selling price (RM)<input id="carAdminPrice" type="number" min="0" required></label>
+        <label>Mileage (km)<input id="carMileage" type="number" min="0" placeholder="35000"></label>
+        <label>Status<select id="carStatus"><option>AVAILABLE</option><option>INCOMING</option><option>DONE PAID DUTI</option><option>PORT KLANG</option><option>SOLD</option><option>BOOKED</option></select></label>
+        <label>Lokasi<input id="carLocation"></label>
+        <label>Jumlah unit<input id="carUnits" type="number" min="1" value="1"></label>
+        <label class="wide">Main image URL<input id="carImageUrl" placeholder="https://..."></label>
+        <label class="check-label"><input id="carActive" type="checkbox" checked> Paparkan di website</label>
+        <label class="check-label"><input id="carFeatured" type="checkbox"> Featured di homepage</label>
+      </div>
+      <div class="dialog-actions"><button type="button" data-close-dialog="carDialog">Batal</button><button class="accent-btn" id="saveCarButton" value="default">Simpan stok</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="eventDialog">
+    <form method="dialog" class="dialog-card" id="eventForm">
+      <div class="card-title"><div><span>EVENT</span><h2 id="eventDialogTitle">Tambah event</h2></div><button class="close-dialog" type="button" data-close-dialog="eventDialog">×</button></div>
+      <input id="eventId" type="hidden">
+      <div class="form-grid">
+        <label>Nama event<input id="eventTitle" required placeholder="E-Carnival Stock Clearance"></label>
+        <label>Label kecil<input id="eventKicker" placeholder="Limited-time event"></label>
+        <label>Tarikh mula<input id="eventStart" type="date"></label>
+        <label>Tarikh tamat<input id="eventEnd" type="date"></label>
+        <label>Lokasi<input id="eventLocation" placeholder="Izuwan Automobile HQ Taman Wahyu"></label>
+        <label>CTA button<input id="eventCtaLabel" placeholder="WhatsApp untuk info lanjut"></label>
+        <label class="wide">Ringkasan pendek<input id="eventSubtitle" placeholder="Special stock clearance untuk selected ready stock."></label>
+        <label class="wide">Details<textarea id="eventDescription" rows="4" placeholder="Masukkan info event, benefit, syarat ringkas atau arahan untuk customer."></textarea></label>
+        <label class="wide">Banner image URL<input id="eventBannerUrl" placeholder="https://..."></label>
+        <label class="wide">Upload banner image<input id="eventBannerFile" type="file" accept="image/png,image/jpeg,image/webp"></label>
+        <label class="wide">WhatsApp message<input id="eventCtaMessage" placeholder="Hai, saya nak tahu info lanjut tentang E-Carnival Stock Clearance."></label>
+        <label class="check-label"><input id="eventActive" type="checkbox" checked> Aktifkan event</label>
+      </div>
+      <div class="dialog-actions"><button type="button" data-close-dialog="eventDialog">Batal</button><button class="accent-btn" id="saveEventButton" value="default">Simpan event</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="salesmanDialog">
+    <form method="dialog" class="dialog-card" id="salesmanForm">
+      <div class="card-title"><div><span>SALESMAN</span><h2 id="salesmanDialogTitle">Tambah salesman</h2></div><button class="close-dialog" type="button" data-close-dialog="salesmanDialog">×</button></div>
+      <input id="salesmanId" type="hidden">
+      <div class="form-grid">
+        <label>Nama<input id="salesmanName" required></label>
+        <label>WhatsApp<input id="salesmanWhatsapp" placeholder="60123456789" required></label>
+        <label>Branch<input id="salesmanBranch"></label>
+        <label>Role<input id="salesmanRole" placeholder="Sales Advisor"></label>
+        <label>Specialty<input id="salesmanSpecialty" placeholder="Ready Stock / MPV Specialist"></label>
+        <label class="wide">Photo URL<input id="salesmanPhotoUrl" placeholder="https://..."></label>
+        <label class="check-label"><input id="salesmanActive" type="checkbox" checked> Aktif</label>
+      </div>
+      <div class="dialog-actions"><button type="button" data-close-dialog="salesmanDialog">Batal</button><button class="accent-btn" id="saveSalesmanButton" value="default">Simpan salesman</button></div>
+    </form>
+  </dialog>
+
+  <div class="admin-toast" id="adminToast"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="data-service.js"></script>
+  <script src="inventory.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
+
+
+

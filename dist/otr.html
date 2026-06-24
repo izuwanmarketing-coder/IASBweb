@@ -1,0 +1,72 @@
+﻿<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OTR Calculator | Izuwan Automobile</title>
+  <meta name="description" content="Kira breakdown harga on-the-road, loan dan downpayment kereta.">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <link rel="canonical" href="https://izuwanautomobile.com/otr.html">
+  <meta property="og:url" content="https://izuwanautomobile.com/otr.html">
+  <meta property="og:site_name" content="Izuwan Automobile">
+  <meta property="og:locale" content="ms_MY">
+  <meta property="og:title" content="OTR Calculator | Izuwan Automobile">
+  <meta property="og:description" content="Kira breakdown harga on-the-road, loan dan downpayment kereta.">
+  <meta property="og:image" content="https://thjzzfvoxqqvkgvrdjpr.supabase.co/storage/v1/object/public/branding/company-logo.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="OTR Calculator | Izuwan Automobile">
+  <meta name="twitter:description" content="Kira breakdown harga on-the-road, loan dan downpayment kereta.">
+  <meta name="twitter:image" content="https://thjzzfvoxqqvkgvrdjpr.supabase.co/storage/v1/object/public/branding/company-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="manifest" href="site.webmanifest">
+</head>
+<body>
+  <header class="topbar page-topbar">
+    <a class="brand" href="index.html"><img class="brand-logo hidden" data-brand-logo alt="Logo"><span class="brand-mark" data-brand-mark>IA</span><span><strong data-brand-name>IZUWAN</strong><small>AUTOMOBILE</small></span></a>
+    <button class="menu-btn" id="menuButton" aria-label="Buka menu" aria-expanded="false">Menu</button>
+    <nav class="site-nav" id="siteNav"><a href="index.html">Home</a><a href="about.html">About</a><a href="inventory.html">Inventory</a><a href="select-programme.html">Select Programme</a><a href="contact.html">Contact</a><a class="tool-nav-link" href="calculator.html">Tools</a></nav>
+    <div class="top-actions"><a class="header-cta" href="calculator.html">Loan Calculator</a><button class="icon-btn" id="themeButton" aria-label="Tukar tema"></button></div>
+  </header>
+  <main class="inner-main">
+    <div class="promotion-banner hidden" data-promotion-banner></div>
+    <section class="page-hero tool-page-hero"><span class="eyebrow">ON-THE-ROAD BREAKDOWN</span><h1>Every number,<br>in one clear view.</h1><p>Kira selling price, caj, insurance, pinjaman dan baki downpayment secara berasingan.</p></section>
+    <section class="otr-page">
+      <div class="vehicle-field"><label for="vehicleName">Kereta / model</label><input class="plain-input" id="vehicleName" placeholder="Contoh: Toyota Alphard 2.5 SC"></div>
+      <div class="otr-shell">
+        <div class="otr-form">
+          <div class="field-grid"><div class="field"><label for="otrSellingPrice">Selling price</label><div class="money-input"><span>RM</span><input id="otrSellingPrice" type="number" min="0" step="100" value="0"></div></div><div class="field"><label for="otrRoadtax">Roadtax</label><div class="money-input"><span>RM</span><input id="otrRoadtax" type="number" min="0" step="10" value="0"></div></div></div>
+          <div class="field-grid"><div class="field"><label for="otrRegistration">Registration / ownership fee</label><div class="money-input"><span>RM</span><input id="otrRegistration" type="number" min="0" step="10" value="0"></div></div><div class="field"><label for="otrProcessing">Processing fee</label><div class="money-input"><span>RM</span><input id="otrProcessing" type="number" min="0" step="100" value="2800"></div></div></div>
+          <div class="field-grid"><div class="field"><label for="otrWarranty">Warranty</label><div class="money-input"><span>RM</span><input id="otrWarranty" type="number" min="0" step="100" value="0"></div></div><div class="field"><label for="otrInsurance">Insurance</label><div class="money-input"><span>RM</span><input id="otrInsurance" type="number" min="0" step="100" value="0"></div></div></div>
+          <div class="field-grid"><div class="field"><label for="otrNcd">NCD customer</label><div class="select-wrap"><select id="otrNcd"><option value="0">0%</option><option value="25">25%</option><option value="30">30%</option><option value="38.33">38.33%</option><option value="45">45%</option><option value="55">55%</option></select></div></div><div class="field"><label for="otrWindscreen">Windscreen cover</label><div class="money-input"><span>RM</span><input id="otrWindscreen" type="number" min="0" step="50" value="0"></div></div></div>
+        </div>
+        <aside class="otr-result">
+          <span class="step-label">TRANSACTION BREAKDOWN</span>
+          <div class="otr-total"><span>Anggaran harga OTR</span><strong id="otrTotal">RM 0</strong></div>
+          <div class="otr-lines"><div><span>Selling price</span><b id="otrLineSelling">RM 0</b></div><div><span>Roadtax</span><b id="otrLineRoadtax">RM 0</b></div><div><span>Registration / ownership</span><b id="otrLineRegistration">RM 0</b></div><div><span>Processing & warranty</span><b id="otrLineProcessingWarranty">RM 0</b></div><div><span>Insurance <small id="otrNcdLabel">(NCD 0%)</small></span><b id="otrLineInsurance">RM 0</b></div><div><span>Windscreen cover</span><b id="otrLineWindscreen">RM 0</b></div></div>
+          <div class="otr-payment"><div class="field"><label for="otrLoanAmount">Loan amount</label><div class="money-input light-input"><span>RM</span><input id="otrLoanAmount" type="number" min="0" step="100" value="0"></div></div><div class="field-grid"><div class="field"><label for="otrBooking">Booking paid</label><div class="money-input light-input"><span>RM</span><input id="otrBooking" type="number" min="0" step="100" value="0"></div></div><div class="field"><label for="otrDownpaymentPaid">Downpayment paid</label><div class="money-input light-input"><span>RM</span><input id="otrDownpaymentPaid" type="number" min="0" step="100" value="0"></div></div></div></div>
+          <div class="otr-balance"><div><span>Total payable (downpayment)</span><strong id="otrPayable">RM 0</strong></div><div><span>Balance downpayment</span><strong id="otrBalance">RM 0</strong></div></div>
+          <div class="field salesman-field hidden" id="salesmanField"><label for="salesmanSelect">Salesman</label><div class="select-wrap light-select"><select id="salesmanSelect"></select></div></div>
+          <div class="action-grid"><button class="primary-btn" id="otrWhatsappButton"><span>Share breakdown</span><b>↗</b></button><button class="secondary-btn" id="otrCopyButton">Salin</button></div>
+          <button class="quotation-btn" id="printQuotationButton">Print / Save quotation PDF</button>
+          <p class="disclaimer">* Insurance, warranty dan roadtax perlu disahkan mengikut model, CC, NCD dan profil customer.</p>
+        </aside>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer"><div class="brand muted"><span class="brand-mark">IA</span><span><strong data-brand-name>IZUWAN</strong><small>AUTOMOBILE</small></span></div><nav><a href="about.html">About</a><a href="select-programme.html">Select Programme</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></nav><p>Sales Tool · Anggaran Awal Sahaja</p></footer>
+  <div class="toast" id="toast"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="data-service.js"></script><script src="site.js"></script><script src="otr-page.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+

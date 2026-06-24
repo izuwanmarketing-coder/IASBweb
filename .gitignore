@@ -4,6 +4,5 @@ desktop.ini
 *.log
 *.tmp
 node_modules/
-dist/
 .env
 .env.*

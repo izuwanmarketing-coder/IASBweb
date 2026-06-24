@@ -1,0 +1,78 @@
+﻿<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inventory | Izuwan Automobile</title>
+  <meta name="description" content="Terokai inventory kereta recond Izuwan Automobile mengikut model, brand, lokasi dan status.">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <link rel="canonical" href="https://izuwanautomobile.com/inventory.html">
+  <meta property="og:url" content="https://izuwanautomobile.com/inventory.html">
+  <meta property="og:site_name" content="Izuwan Automobile">
+  <meta property="og:locale" content="ms_MY">
+  <meta property="og:title" content="Inventory | Izuwan Automobile">
+  <meta property="og:description" content="Terokai inventory kereta recond Izuwan Automobile mengikut model, brand, lokasi dan status.">
+  <meta property="og:image" content="https://thjzzfvoxqqvkgvrdjpr.supabase.co/storage/v1/object/public/branding/company-logo.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Inventory | Izuwan Automobile">
+  <meta name="twitter:description" content="Terokai inventory kereta recond Izuwan Automobile mengikut model, brand, lokasi dan status.">
+  <meta name="twitter:image" content="https://thjzzfvoxqqvkgvrdjpr.supabase.co/storage/v1/object/public/branding/company-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="manifest" href="site.webmanifest">
+</head>
+<body>
+  <header class="topbar page-topbar">
+    <a class="brand" href="index.html"><img class="brand-logo hidden" data-brand-logo alt="Logo"><span class="brand-mark" data-brand-mark>IA</span><span><strong data-brand-name>IZUWAN</strong><small>AUTOMOBILE</small></span></a>
+    <button class="menu-btn" id="menuButton" aria-label="Buka menu" aria-expanded="false">Menu</button>
+    <nav class="site-nav" id="siteNav"><a href="index.html">Home</a><a href="about.html">About</a><a href="inventory.html">Inventory</a><a href="select-programme.html">Select Programme</a><a href="contact.html">Contact</a><a class="tool-nav-link" href="calculator.html">Tools</a></nav>
+    <div class="top-actions"><a class="header-cta" href="calculator.html">Semak Bajet</a><button class="icon-btn" id="themeButton" aria-label="Tukar tema"></button></div>
+  </header>
+  <main class="inner-main">
+    <div class="promotion-banner hidden" data-promotion-banner></div>
+    <section class="page-hero inventory-hero">
+      <span class="eyebrow">OUR INVENTORY</span>
+      <h1>Find the one<br>that feels right.</h1>
+      <p>Lihat pilihan unit, status, harga dan lokasi. Gunakan filter untuk mencari kereta yang paling dekat dengan keperluan anda.</p>
+      <div class="inventory-stats hidden" id="inventoryStats">
+        <div><strong id="inventoryCount">—</strong><span>model dipaparkan</span></div>
+        <div><strong id="unitCount">—</strong><span>unit tersedia</span></div>
+        <div><strong id="locationCount">—</strong><span>lokasi</span></div>
+      </div>
+    </section>
+    <section class="inventory-browser">
+      <div class="inventory-heading">
+        <div><span class="eyebrow">BROWSE COLLECTION</span><h2>Current selection</h2><p id="inventorySummary">Menyediakan senarai ready stock...</p></div>
+        <div class="filters inventory-types">
+          <button class="filter active" data-type="all">Semua</button><button class="filter" data-type="MPV">MPV</button><button class="filter" data-type="SUV">SUV</button><button class="filter" data-type="Sedan">Sedan</button><button class="filter" data-type="Hatchback">Hatchback</button>
+        </div>
+      </div>
+      <div class="stock-toolbar">
+        <label class="stock-search"><span>⌕</span><input id="stockSearch" type="search" placeholder="Cari model, warna atau tahun..."></label>
+        <div class="stock-select"><label for="brandFilter">Brand</label><select id="brandFilter"><option value="all">Semua brand</option></select></div>
+        <div class="stock-select"><label for="locationFilter">Lokasi</label><select id="locationFilter"><option value="all">Semua lokasi</option></select></div>
+        <div class="stock-select"><label for="statusFilter">Status</label><select id="statusFilter"><option value="all">Semua status</option><option>AVAILABLE</option><option>INCOMING</option><option>DONE PAID DUTI</option><option>PORT KLANG</option></select></div>
+        <div class="stock-select"><label for="sortFilter">Susun</label><select id="sortFilter"><option value="latest">Latest Arrival</option><option value="price-low">Lowest Price</option><option value="price-high">Highest Price</option><option value="mileage-low">Lowest Mileage</option></select></div>
+        <button class="clear-filters" id="clearFilters">Reset filter</button>
+      </div>
+      <div class="inventory-grid" id="carGrid"><div class="inventory-skeleton"></div><div class="inventory-skeleton"></div><div class="inventory-skeleton"></div></div>
+    </section>
+  </main>
+  <dialog class="photo-dialog" id="photoDialog">
+    <div class="photo-lightbox"><button class="photo-close" id="photoClose">×</button><button class="photo-nav photo-prev" id="photoPrev">‹</button><img id="photoLarge" alt="Gambar kereta"><button class="photo-nav photo-next" id="photoNext">›</button><div class="photo-caption"><div><strong id="photoTitle"></strong><span id="photoCounter"></span></div><a id="photoDriveLink" target="_blank" rel="noopener">Buka semua gambar ↗</a></div></div>
+  </dialog>
+  <footer class="site-footer"><div class="brand muted"><span class="brand-mark">IA</span><span><strong data-brand-name>IZUWAN</strong><small>AUTOMOBILE</small></span></div><nav><a href="about.html">About</a><a href="select-programme.html">Select Programme</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></nav><p>Japan Reconditioned Car Specialist · Since 2011</p></footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="data-service.js"></script><script src="inventory.js"></script><script src="car-photos.js"></script><script src="photo-curation.js"></script><script src="site.js"></script><script src="inventory-page.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
