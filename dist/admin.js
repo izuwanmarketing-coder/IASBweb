@@ -4,6 +4,7 @@ const $ = id => document.getElementById(id);
 let inventoryRows = [];
 let salesmanRows = [];
 let eventRows = [];
+let deliveryRows = [];
 let settingsRow = {};
 let schemaWarnings = [];
 
@@ -80,21 +81,24 @@ async function showApp() {
 
 async function loadAll() {
   schemaWarnings = [];
-  const [inventoryData, settingsData, salesmenData, eventsData] = await Promise.all([
+  const [inventoryData, settingsData, salesmenData, eventsData, deliveriesData] = await Promise.all([
     readQuery("Inventory", db.from("inventory").select("*").order("updated_at", { ascending: false }), []),
     readQuery("Settings", db.from("site_settings").select("*").eq("id", 1).maybeSingle(), {}),
     readQuery("Salesmen", db.from("salesmen").select("*").order("name"), []),
-    readQuery("Events", db.from("site_events").select("*").order("start_date", { ascending: false }), [])
+    readQuery("Events", db.from("site_events").select("*").order("start_date", { ascending: false }), []),
+    readQuery("Deliveries", db.from("deliveries").select("*").order("sort_order", { ascending: true }).order("delivered_at", { ascending: false }), [])
   ]);
   inventoryRows = inventoryData;
   settingsRow = settingsData || {};
   salesmanRows = salesmenData;
   eventRows = eventsData;
+  deliveryRows = deliveriesData;
   renderDashboard();
   renderInventory();
   renderSettings();
   renderSalesmen();
   renderEvents();
+  renderDeliveries();
   if (schemaWarnings.length) toast("Ada schema baru belum aktif. Run supabase-schema.sql jika perlu.");
 }
 
@@ -103,6 +107,7 @@ function renderDashboard() {
   $("statUnits").textContent = activeCars.reduce((sum, x) => sum + Number(x.units || 1), 0);
   $("statModels").textContent = activeCars.length;
   $("statIncoming").textContent = activeCars.filter(x => x.status === "INCOMING").reduce((sum, x) => sum + Number(x.units || 1), 0);
+  $("statDelivered").textContent = deliveryRows.filter(x => x.is_active).length;
   $("statSalesmen").textContent = salesmanRows.filter(x => x.is_active).length;
 
   const statuses = Object.entries(activeCars.reduce((acc, car) => {
@@ -182,6 +187,17 @@ function renderEvents() {
     </tr>`).join("") || `<tr><td colspan="5">Belum ada event. Tambah e-carnival stock clearance di sini.</td></tr>`;
 }
 
+function renderDeliveries() {
+  $("deliveriesTable").innerHTML = deliveryRows.map(item => `
+    <tr>
+      <td class="table-main"><b>${safeText(item.title)}</b><small>${formatDate(item.delivered_at)} · ${safeText(item.customer_name || "-")}</small></td>
+      <td>${safeText(item.model)}</td>
+      <td>${safeText(item.location)}</td>
+      <td><span class="status-chip">${item.is_active ? "ACTIVE" : "INACTIVE"}</span></td>
+      <td><div class="row-actions"><button data-edit-delivery="${item.id}">Edit</button><button class="danger" data-delete-delivery="${item.id}">Delete</button></div></td>
+    </tr>`).join("") || `<tr><td colspan="5">Belum ada delivery. Tambah gambar serahan customer untuk homepage.</td></tr>`;
+}
+
 function openCarDialog(car = {}) {
   $("carDialogTitle").textContent = car.id ? "Edit stok" : "Tambah stok";
   $("carId").value = car.id || "";
@@ -233,6 +249,22 @@ function openEventDialog(event = {}) {
   $("eventDialog").showModal();
 }
 
+function openDeliveryDialog(item = {}) {
+  $("deliveryDialogTitle").textContent = item.id ? "Edit delivery" : "Tambah delivery";
+  $("deliveryId").value = item.id || "";
+  $("deliveryTitle").value = item.title || "";
+  $("deliveryCustomer").value = item.customer_name || "";
+  $("deliveryModel").value = item.model || "";
+  $("deliveryLocation").value = item.location || "";
+  $("deliveryDate").value = item.delivered_at || "";
+  $("deliverySort").value = item.sort_order || 0;
+  $("deliveryCaption").value = item.caption || "";
+  $("deliveryPhotoUrl").value = item.photo_url || "";
+  $("deliveryPhotoFile").value = "";
+  $("deliveryActive").checked = item.is_active ?? true;
+  $("deliveryDialog").showModal();
+}
+
 $("loginForm").addEventListener("submit", async event => {
   event.preventDefault();
   $("loginMessage").textContent = "";
@@ -270,6 +302,7 @@ $("adminStockStatus").addEventListener("change", renderInventory);
 $("addCarButton").addEventListener("click", () => openCarDialog());
 $("addSalesmanButton").addEventListener("click", () => openSalesmanDialog());
 $("addEventButton").addEventListener("click", () => openEventDialog({ title: "E-Carnival Stock Clearance", kicker: "SPECIAL EVENT", cta_label: "WhatsApp untuk info lanjut" }));
+$("addDeliveryButton").addEventListener("click", () => openDeliveryDialog({ title: "Delivered by Izuwan", location: "HQ Taman Wahyu" }));
 $("importStarterButton").addEventListener("click", async () => {
   if (inventoryRows.length && !confirm("Inventory sudah ada. Import juga stok asal?")) return;
   const payload = (window.inventoryData || []).map(car => ({
@@ -304,6 +337,18 @@ $("eventsTable").addEventListener("click", async event => {
     const { error } = await db.from("site_events").delete().eq("id", deleteId);
     if (error) return toast(error.message);
     toast("Event dipadam");
+    await loadAll();
+  }
+});
+
+$("deliveriesTable").addEventListener("click", async event => {
+  const editId = event.target.dataset.editDelivery;
+  const deleteId = event.target.dataset.deleteDelivery;
+  if (editId) openDeliveryDialog(deliveryRows.find(x => x.id === Number(editId)));
+  if (deleteId && confirm("Delete delivery ini?")) {
+    const { error } = await db.from("deliveries").delete().eq("id", deleteId);
+    if (error) return toast(error.message);
+    toast("Delivery dipadam");
     await loadAll();
   }
 });
@@ -367,6 +412,38 @@ $("eventForm").addEventListener("submit", async event => {
   if (error) return toast(error.message);
   $("eventDialog").close();
   toast(id ? "Event dikemas kini" : "Event ditambah");
+  await loadAll();
+});
+
+$("deliveryForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const id = $("deliveryId").value;
+  let photoUrl = $("deliveryPhotoUrl").value.trim();
+  const file = $("deliveryPhotoFile").files[0];
+  if (file) {
+    const extension = file.name.split(".").pop();
+    const path = `deliveries/delivery-${Date.now()}.${extension}`;
+    const { error: uploadError } = await db.storage.from("branding").upload(path, file, { upsert: true });
+    if (uploadError) return toast(uploadError.message);
+    photoUrl = db.storage.from("branding").getPublicUrl(path).data.publicUrl;
+  }
+  const payload = {
+    title: $("deliveryTitle").value.trim(),
+    customer_name: $("deliveryCustomer").value.trim(),
+    model: $("deliveryModel").value.trim(),
+    location: $("deliveryLocation").value.trim(),
+    delivered_at: $("deliveryDate").value || null,
+    caption: $("deliveryCaption").value.trim(),
+    photo_url: photoUrl,
+    sort_order: Number($("deliverySort").value) || 0,
+    is_active: $("deliveryActive").checked,
+    updated_at: new Date().toISOString()
+  };
+  const query = id ? db.from("deliveries").update(payload).eq("id", id) : db.from("deliveries").insert(payload);
+  const { error } = await query;
+  if (error) return toast(error.message);
+  $("deliveryDialog").close();
+  toast(id ? "Delivery dikemas kini" : "Delivery ditambah");
   await loadAll();
 });
 

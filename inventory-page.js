@@ -81,6 +81,9 @@
     const gallery = photoFor(car);
     const detailLine = [car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "Maklumat unit";
     const encodedLabel = encodeURIComponent(`${car.brand} ${car.model} - ${detailLine}`);
+    const detailHref = car.id
+      ? `car.html?id=${encodeURIComponent(car.id)}`
+      : `car.html?source=${encodeURIComponent(car._sourceIndex ?? "")}`;
     const media = gallery?.photos?.length
       ? `<button class="inventory-photo" type="button" data-car-key="${encodeURIComponent(keyFor(car))}">
           <img loading="lazy" src="${safeText(gallery.photos[0].src)}" alt="${safeText(`${car.brand} ${car.model}`)}">
@@ -108,6 +111,7 @@
           <span>${Number(car.units) || 1} unit</span>
         </div>
         <div class="inventory-actions">
+          <a href="${detailHref}">Details</a>
           <a href="calculator.html?price=${Number(car.price) || 0}&car=${encodedLabel}">Kira ansuran</a>
           <a class="outline" data-stock-enquiry href="#">Tanya stok</a>
         </div>
@@ -144,7 +148,7 @@
     document.querySelectorAll("[data-stock-enquiry]").forEach((link, index) => {
       const car = displayed[index];
       const detailLine = [car.year, car.grade, car.variant].filter(Boolean).join(" / ");
-      link.href = window.IASBSite.whatsappUrl(`Hai, saya berminat dengan ${car.brand} ${car.model}${detailLine ? ` (${detailLine})` : ""}. Masih available?`);
+      link.href = window.IASBSite.whatsappUrl(`[Inventory Page] Hai, saya berminat dengan ${car.brand} ${car.model}${detailLine ? ` (${detailLine})` : ""}. Masih available?`);
     });
   }
 

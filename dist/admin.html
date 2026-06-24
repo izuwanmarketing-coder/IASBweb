@@ -36,6 +36,7 @@
         <button class="admin-nav active" data-page="dashboard">Overview</button>
         <button class="admin-nav" data-page="inventory">Inventory</button>
         <button class="admin-nav" data-page="events">Events</button>
+        <button class="admin-nav" data-page="delivered">Delivered</button>
         <button class="admin-nav" data-page="settings">Site & OTR</button>
         <button class="admin-nav" data-page="salesmen">Salesmen</button>
       </nav>
@@ -54,6 +55,7 @@
           <article><span>Total unit</span><strong id="statUnits">0</strong></article>
           <article><span>Model aktif</span><strong id="statModels">0</strong></article>
           <article><span>Incoming</span><strong id="statIncoming">0</strong></article>
+          <article><span>Delivered</span><strong id="statDelivered">0</strong></article>
           <article><span>Salesmen</span><strong id="statSalesmen">0</strong></article>
         </div>
         <div class="dashboard-grid">
@@ -98,6 +100,22 @@
             <table>
               <thead><tr><th>Event</th><th>Duration</th><th>CTA</th><th>Status</th><th></th></tr></thead>
               <tbody id="eventsTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-page" data-page-panel="delivered">
+        <div class="admin-card">
+          <div class="card-title">
+            <div><span>SOCIAL PROOF</span><h2>Delivered by Izuwan</h2></div>
+            <button class="accent-btn" id="addDeliveryButton">+ Tambah delivery</button>
+          </div>
+          <p class="admin-help">Tambah gambar serahan customer untuk keluar di homepage. Kalau belum ada gambar, website akan guna fallback premium.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Delivery</th><th>Model</th><th>Lokasi</th><th>Status</th><th></th></tr></thead>
+              <tbody id="deliveriesTable"></tbody>
             </table>
           </div>
         </div>
@@ -178,6 +196,26 @@
         <label class="check-label"><input id="eventActive" type="checkbox" checked> Aktifkan event</label>
       </div>
       <div class="dialog-actions"><button type="button" data-close-dialog="eventDialog">Batal</button><button class="accent-btn" id="saveEventButton" value="default">Simpan event</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="deliveryDialog">
+    <form method="dialog" class="dialog-card" id="deliveryForm">
+      <div class="card-title"><div><span>DELIVERED</span><h2 id="deliveryDialogTitle">Tambah delivery</h2></div><button class="close-dialog" type="button" data-close-dialog="deliveryDialog">×</button></div>
+      <input id="deliveryId" type="hidden">
+      <div class="form-grid">
+        <label>Title<input id="deliveryTitle" required placeholder="Delivered to happy owner"></label>
+        <label>Customer / label<input id="deliveryCustomer" placeholder="Owner / Customer"></label>
+        <label>Model<input id="deliveryModel" placeholder="Toyota Alphard 2.5 SC"></label>
+        <label>Lokasi<input id="deliveryLocation" placeholder="HQ Taman Wahyu"></label>
+        <label>Tarikh delivery<input id="deliveryDate" type="date"></label>
+        <label>Sort order<input id="deliverySort" type="number" min="0" value="0"></label>
+        <label class="wide">Caption<textarea id="deliveryCaption" rows="3" placeholder="Ringkasan pendek untuk homepage."></textarea></label>
+        <label class="wide">Photo URL<input id="deliveryPhotoUrl" placeholder="https://..."></label>
+        <label class="wide">Upload photo<input id="deliveryPhotoFile" type="file" accept="image/png,image/jpeg,image/webp"></label>
+        <label class="check-label"><input id="deliveryActive" type="checkbox" checked> Paparkan di homepage</label>
+      </div>
+      <div class="dialog-actions"><button type="button" data-close-dialog="deliveryDialog">Batal</button><button class="accent-btn" id="saveDeliveryButton" value="default">Simpan delivery</button></div>
     </form>
   </dialog>
 

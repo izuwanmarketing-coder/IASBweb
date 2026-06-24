@@ -25,6 +25,22 @@
     return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-MY", { day: "2-digit", month: "long", year: "numeric" });
   }
 
+  function countdownText(event) {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const start = event.start_date ? new Date(`${event.start_date}T00:00:00`) : null;
+    const end = event.end_date ? new Date(`${event.end_date}T23:59:59`) : null;
+    if (start && start > now) {
+      const days = Math.ceil((start - now) / 86400000);
+      return `${days} hari lagi`;
+    }
+    if (end && end >= now) {
+      const days = Math.max(1, Math.ceil((end - now) / 86400000));
+      return `${days} hari berbaki`;
+    }
+    return "Live sekarang";
+  }
+
   function fallback() {
     root.innerHTML = `<div class="inventory-state">
       <span>EVENT UPDATE</span>
@@ -49,8 +65,14 @@
           <h2>${safeText(event.title)}</h2>
           <p>${safeText(event.description || event.subtitle || "Event khas Izuwan Automobile sedang berlangsung.")}</p>
           <div class="event-detail-meta">
+            <span>${safeText(countdownText(event))}</span>
             ${dateText ? `<span>${safeText(dateText)}</span>` : ""}
             ${event.location ? `<span>${safeText(event.location)}</span>` : ""}
+          </div>
+          <div class="event-benefits">
+            <span>Ready stock clearance</span>
+            <span>Viewing slot at HQ</span>
+            <span>Loan & insurance assistance</span>
           </div>
           <div class="event-detail-actions">
             <a href="${window.IASBSite.whatsappUrl(message)}" target="_blank" rel="noopener">${safeText(event.cta_label || "WhatsApp untuk info lanjut")} ↗</a>

@@ -19,7 +19,7 @@
       <span>READY STOCK</span>
       <h3>Featured stock sedang dikemaskini.</h3>
       <p>Untuk senarai ready stock terkini, WhatsApp team Izuwan dan kami akan semak availability untuk anda.</p>
-      <a href="${window.IASBSite.whatsappUrl("Hai, saya ingin semak ready stock featured Izuwan Automobile.")}" target="_blank" rel="noopener">WhatsApp Izuwan →</a>
+      <a href="${window.IASBSite.whatsappUrl("[Homepage Featured Stock] Hai, saya ingin semak ready stock featured Izuwan Automobile.")}" target="_blank" rel="noopener">WhatsApp Izuwan →</a>
     </div>`;
   }
 
@@ -31,7 +31,8 @@
 
     grid.innerHTML = displayCars.map(car => {
       const detailLine = [car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "Maklumat unit";
-      const message = `Hai, saya berminat dengan featured stock ${car.brand} ${car.model} (${detailLine}). Masih available?`;
+      const detailHref = car.id ? `car.html?id=${encodeURIComponent(car.id)}` : "inventory.html";
+      const message = `[Homepage Featured Stock] Hai, saya berminat dengan featured stock ${car.brand} ${car.model} (${detailLine}). Masih available?`;
       return `<article class="featured-stock-card">
         <div class="featured-stock-photo">${car.image_url
           ? `<img loading="lazy" src="${safeText(car.image_url)}" alt="${safeText(`${car.brand} ${car.model}`)}">`
@@ -46,7 +47,10 @@
           </div>
           <div class="featured-stock-bottom">
             <strong>${money(car.price)}</strong>
-            <a href="${window.IASBSite.whatsappUrl(message)}" target="_blank" rel="noopener">Enquire →</a>
+            <span>
+              <a class="featured-detail-link" href="${detailHref}">Details</a>
+              <a href="${window.IASBSite.whatsappUrl(message)}" target="_blank" rel="noopener">Enquire →</a>
+            </span>
           </div>
         </div>
       </article>`;

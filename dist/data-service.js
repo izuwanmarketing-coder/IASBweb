@@ -58,6 +58,21 @@
     return data || [];
   }
 
+  async function getDeliveries() {
+    if (!client) return [];
+    const { data, error } = await client
+      .from("deliveries")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("delivered_at", { ascending: false });
+    if (error) {
+      console.warn("Delivered gallery unavailable.", error);
+      return [];
+    }
+    return data || [];
+  }
+
   async function getSalesmen() {
     if (!client) return null;
     const { data, error } = await client
@@ -73,14 +88,15 @@
     client,
     configured,
     async loadPublicData() {
-      if (!client) return { inventory: null, settings: null, salesmen: null };
-      const [inventory, settings, salesmen] = await Promise.all([
+      if (!client) return { inventory: null, settings: null, salesmen: null, events: [], deliveries: [] };
+      const [inventory, settings, salesmen, events, deliveries] = await Promise.all([
         getInventory(),
         getSettings(),
-        getSalesmen()
+        getSalesmen(),
+        getEvents(),
+        getDeliveries()
       ]);
-      const events = await getEvents();
-      return { inventory, settings, salesmen, events };
+      return { inventory, settings, salesmen, events, deliveries };
     }
   };
 })();
