@@ -2,13 +2,16 @@
 
 Static production website for Izuwan Automobile, ready for GitHub + Cloudflare Pages.
 
-## Deploy target
+## Cloudflare Pages settings
 
-- Hosting: Cloudflare Pages
-- Framework preset: None
-- Build command: leave blank
-- Build output directory: `/`
+Use these exact settings:
+
+- Framework preset: `None`
+- Build command: `npm run build`
+- Build output directory: `dist`
 - Production branch: `main`
+
+This repo includes a tiny build script that copies the public website files into `dist/`, so Cloudflare Pages has a clean output folder to publish.
 
 ## Main pages
 
@@ -46,31 +49,19 @@ config.js
 
 The Supabase publishable key is safe to be public. Do not commit private service-role keys.
 
-## Cloudflare Pages notes
+## DNS reminder
 
-After uploading this repo to GitHub:
+When Cloudflare Pages custom domains are added, remove old website A records for:
 
-1. Go to Cloudflare Dashboard.
-2. Open Workers & Pages.
-3. Create Pages project.
-4. Connect GitHub repo.
-5. Use the deploy settings above.
-6. Add custom domains:
-   - `izuwanautomobile.com`
-   - `www.izuwanautomobile.com`
+- `izuwanautomobile.com`
+- `www.izuwanautomobile.com`
 
-Keep email DNS records separate. Do not delete MX, SPF, DKIM, DMARC or GoDaddy email records unless email is intentionally being moved.
+Do not delete email records:
 
-## Local preview
+- MX
+- SPF TXT
+- DKIM TXT / CNAME
+- DMARC TXT
+- email/autodiscover records
 
-Open `index.html` directly in a browser, or run:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\dev-server.ps1
-```
-
-Then open:
-
-```text
-http://localhost:4173
-```
+For email records, keep them as DNS only / grey cloud.
