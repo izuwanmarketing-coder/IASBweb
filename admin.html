@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260624-5">
-  <link rel="stylesheet" href="admin-overrides.css?v=20260624-5">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="admin.css?v=20260624-6">
+  <link rel="stylesheet" href="admin-overrides.css?v=20260624-6">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="manifest" href="site.webmanifest">
@@ -86,10 +86,10 @@
             <div>
               <span>PRICELIST IMPORT</span>
               <h3>Upload pricelist CSV</h3>
-              <p>Export file Excel/Sheets sebagai CSV dulu. Sistem akan match stok ikut brand, model, year, grade dan variant.</p>
+              <p>Upload CSV untuk hasil paling tepat, atau PDF untuk bacaan best-effort. Sistem akan match stok ikut brand, model, year, grade dan variant.</p>
             </div>
             <div class="pricelist-controls">
-              <input id="pricelistFile" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain">
+              <input id="pricelistFile" type="file" accept=".csv,.txt,.tsv,.pdf,text/csv,text/plain,application/pdf">
               <input id="pricelistDate" placeholder="Pricelist date contoh: 24.6.26">
               <select id="pricelistMode">
                 <option value="upsert">Update existing + insert new</option>
@@ -307,7 +307,7 @@
   <script src="config.js?v=20260624-4"></script>
   <script src="data-service.js?v=20260624-4"></script>
   <script src="inventory.js?v=20260624-4"></script>
-  <script src="admin.js?v=20260624-5"></script>
+  <script src="admin.js?v=20260624-6"></script>
 </body>
 </html>
 

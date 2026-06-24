@@ -304,6 +304,94 @@ function parsePricelistText(text) {
   return { records: deduped, errors };
 }
 
+async function extractPdfLines(file) {
+  const pdfjsLib = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs";
+  const data = new Uint8Array(await file.arrayBuffer());
+  const pdf = await pdfjsLib.getDocument({ data }).promise;
+  const lines = [];
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+    const page = await pdf.getPage(pageNumber);
+    const content = await page.getTextContent();
+    const groups = new Map();
+    content.items.forEach(item => {
+      const text = String(item.str || "").trim();
+      if (!text) return;
+      const y = Math.round(item.transform?.[5] || 0);
+      const x = Math.round(item.transform?.[4] || 0);
+      if (!groups.has(y)) groups.set(y, []);
+      groups.get(y).push({ x, text });
+    });
+    [...groups.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .forEach(([, items]) => {
+        const line = items.sort((a, b) => a.x - b.x).map(item => item.text).join(" ").replace(/\s+/g, " ").trim();
+        if (line) lines.push(line);
+      });
+  }
+  return lines;
+}
+
+function parsePdfPricelistLines(lines) {
+  const knownBrands = ["Toyota", "Lexus", "Honda", "Nissan", "Mazda", "Mercedes-Benz", "Mercedes", "BMW", "Audi", "Volkswagen", "Porsche", "Subaru", "Mitsubishi", "Suzuki"];
+  const statusWords = ["AVAILABLE", "INCOMING", "DONE PAID DUTI", "PORT KLANG", "SOLD", "BOOKED"];
+  const records = [];
+  const errors = [];
+  lines.forEach((line, index) => {
+    const clean = line.replace(/\s+/g, " ").trim();
+    const lower = clean.toLowerCase();
+    if (!clean || /price\s*list|pricelist|brand|model|total|page\s+\d|izuwan|automobile/i.test(clean)) return;
+    const brand = knownBrands.find(item => lower.includes(item.toLowerCase()));
+    const priceMatch = clean.match(/(?:rm\s*)?(\d{2,3}(?:[,\s]\d{3})+(?:\.\d{1,2})?|\d{5,7})(?!\s*(?:km|cc))/i);
+    if (!brand || !priceMatch) return;
+
+    const price = parseMoney(priceMatch[1]);
+    const yearMatch = clean.match(/\b(20[0-3]\d|19[8-9]\d)\b/);
+    const mileageMatch = clean.match(/\b(\d{1,3}(?:[,\s]\d{3})+|\d{4,6})\s*(?:km|kms|mileage)\b/i);
+    const status = statusWords.find(word => lower.includes(word.toLowerCase())) || "AVAILABLE";
+    const afterBrand = clean.slice(clean.toLowerCase().indexOf(brand.toLowerCase()) + brand.length).trim();
+    const stopAt = [yearMatch?.index, priceMatch.index, mileageMatch?.index].filter(value => value !== undefined && value >= 0).sort((a, b) => a - b)[0];
+    const modelPart = (stopAt !== undefined ? clean.slice(clean.toLowerCase().indexOf(brand.toLowerCase()) + brand.length, stopAt) : afterBrand)
+      .replace(/\b\d{1,2}\.\d\b/g, "")
+      .replace(/\b\d{3,5}\s*cc\b/ig, "")
+      .replace(/\b(available|incoming|sold|booked|done paid duti|port klang)\b/ig, "")
+      .trim();
+    const pieces = modelPart.split(/\s{2,}| - | \| /).map(x => x.trim()).filter(Boolean);
+    const model = pieces[0] || afterBrand.split(" ").slice(0, 2).join(" ");
+    if (!model) {
+      errors.push(`PDF line ${index + 1}: model tak dapat detect`);
+      return;
+    }
+    records.push({
+      brand: brand === "Mercedes" ? "Mercedes-Benz" : brand,
+      model,
+      year: yearMatch ? Number(yearMatch[1]) : null,
+      grade: pieces[1] || "",
+      variant: pieces[2] || "",
+      type: "Other",
+      price,
+      mileage: mileageMatch ? parseInteger(mileageMatch[1]) : null,
+      status,
+      location: "HQ Taman Wahyu",
+      units: 1,
+      is_active: true,
+      updated_at: new Date().toISOString()
+    });
+  });
+  const deduped = [...new Map(records.map(record => [inventoryImportKey(record), record])).values()];
+  if (!deduped.length) errors.push("PDF dibaca, tapi stock row tak dapat dikesan. Cuba export sebagai CSV untuk hasil lebih tepat.");
+  return { records: deduped, errors };
+}
+
+async function parsePricelistFile(file) {
+  if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") {
+    const lines = await extractPdfLines(file);
+    return parsePdfPricelistLines(lines);
+  }
+  const text = await file.text();
+  return parsePricelistText(text);
+}
+
 function pricelistImportPlan(records = parsedPricelistRows) {
   const existingMap = new Map(inventoryRows.map(car => [inventoryImportKey(car), car]));
   const insertRows = [];
@@ -573,15 +661,25 @@ $("importStarterButton").addEventListener("click", async () => {
 
 $("previewPricelistButton").addEventListener("click", async () => {
   const file = $("pricelistFile").files[0];
-  if (!file) return toast("Pilih file CSV dahulu");
-  if (/\.(xlsx|xls|pdf)$/i.test(file.name)) {
-    return toast("Untuk sekarang upload CSV/TXT. Export Excel pricelist sebagai CSV dahulu.");
+  if (!file) return toast("Pilih file CSV atau PDF dahulu");
+  if (/\.(xlsx|xls)$/i.test(file.name)) {
+    return toast("Upload CSV atau PDF. Untuk Excel, export sebagai CSV dahulu.");
   }
-  const text = await file.text();
-  const { records, errors } = parsePricelistText(text);
-  parsedPricelistRows = records;
-  renderPricelistPreview(errors);
-  toast(`${records.length} row pricelist dibaca`);
+  $("previewPricelistButton").disabled = true;
+  $("previewPricelistButton").textContent = "Reading...";
+  try {
+    const { records, errors } = await parsePricelistFile(file);
+    parsedPricelistRows = records;
+    renderPricelistPreview(errors);
+    toast(`${records.length} row pricelist dibaca`);
+  } catch (error) {
+    parsedPricelistRows = [];
+    renderPricelistPreview([error.message]);
+    toast("PDF/CSV gagal dibaca");
+  } finally {
+    $("previewPricelistButton").disabled = false;
+    $("previewPricelistButton").textContent = "Preview";
+  }
 });
 
 $("pricelistFile").addEventListener("change", () => {
