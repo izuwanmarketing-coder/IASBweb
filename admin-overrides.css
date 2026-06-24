@@ -82,6 +82,76 @@ textarea {
   vertical-align: middle;
 }
 
+.bulk-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 12px;
+  background: rgba(255, 255, 255, .03);
+  border: 1px solid var(--line);
+}
+
+.bulk-toolbar strong,
+.bulk-toolbar span {
+  display: block;
+}
+
+.bulk-toolbar strong {
+  font: 800 13px "Manrope";
+}
+
+.bulk-toolbar span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: flex-end;
+}
+
+.bulk-actions button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.bulk-actions button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.bulk-actions .danger {
+  border-color: rgba(226, 27, 35, .45);
+  color: var(--accent);
+}
+
+.bulk-actions .soft-danger {
+  background: rgba(226, 27, 35, .10);
+}
+
+.select-col {
+  width: 42px;
+  text-align: center;
+}
+
+.select-col input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
 @media (max-width: 850px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -95,5 +165,18 @@ textarea {
 @media (max-width: 520px) {
   .card-title {
     flex-direction: column;
+  }
+
+  .bulk-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .bulk-actions {
+    justify-content: stretch;
+  }
+
+  .bulk-actions button {
+    flex: 1;
   }
 }

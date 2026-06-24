@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260624-2">
-  <link rel="stylesheet" href="admin-overrides.css?v=20260624-2">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="admin.css?v=20260624-3">
+  <link rel="stylesheet" href="admin-overrides.css?v=20260624-3">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="manifest" href="site.webmanifest">
@@ -80,9 +80,18 @@
             <input id="adminStockSearch" type="search" placeholder="Cari model, brand, lokasi...">
             <select id="adminStockStatus"><option value="all">Semua status</option><option>AVAILABLE</option><option>INCOMING</option><option>DONE PAID DUTI</option><option>PORT KLANG</option></select>
           </div>
+          <div class="bulk-toolbar" id="inventoryBulkToolbar">
+            <div><strong id="selectedInventoryCount">0 selected</strong><span id="duplicateInventoryHint">Checking duplicates...</span></div>
+            <div class="bulk-actions">
+              <button type="button" id="selectVisibleInventory">Select visible</button>
+              <button type="button" id="clearInventorySelection">Clear</button>
+              <button type="button" class="danger" id="deleteSelectedInventory">Delete selected</button>
+              <button type="button" class="danger soft-danger" id="removeDuplicateInventory">Remove duplicates</button>
+            </div>
+          </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Model</th><th>Lokasi</th><th>Status</th><th>Harga</th><th>Mileage</th><th>Unit</th><th></th></tr></thead>
+              <thead><tr><th class="select-col"><input id="selectAllInventory" type="checkbox" aria-label="Select all visible inventory"></th><th>Model</th><th>Lokasi</th><th>Status</th><th>Harga</th><th>Mileage</th><th>Unit</th><th></th></tr></thead>
               <tbody id="inventoryTable"></tbody>
             </table>
           </div>
@@ -238,10 +247,10 @@
 
   <div class="admin-toast" id="adminToast"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20260624-2"></script>
-  <script src="data-service.js?v=20260624-2"></script>
-  <script src="inventory.js?v=20260624-2"></script>
-  <script src="admin.js?v=20260624-2"></script>
+  <script src="config.js?v=20260624-3"></script>
+  <script src="data-service.js?v=20260624-3"></script>
+  <script src="inventory.js?v=20260624-3"></script>
+  <script src="admin.js?v=20260624-3"></script>
 </body>
 </html>
 

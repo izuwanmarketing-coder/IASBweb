@@ -7,6 +7,7 @@ let eventRows = [];
 let deliveryRows = [];
 let settingsRow = {};
 let schemaWarnings = [];
+const selectedInventoryIds = new Set();
 
 function toast(message) {
   $("adminToast").textContent = message;
@@ -138,6 +139,51 @@ function filteredInventory() {
   );
 }
 
+function duplicateGroups() {
+  const groups = new Map();
+  inventoryRows.forEach(car => {
+    const key = [
+      car.brand,
+      car.model,
+      car.year || "",
+      car.grade || "",
+      car.variant || "",
+      car.type || "",
+      Number(car.price || 0),
+      car.location || ""
+    ].map(value => String(value).trim().toLowerCase()).join("|");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(car);
+  });
+  return [...groups.values()].filter(group => group.length > 1);
+}
+
+function duplicateIdsToRemove() {
+  return duplicateGroups().flatMap(group => {
+    const sorted = [...group].sort((a, b) => {
+      const dateDiff = (Date.parse(b.updated_at || b.created_at || "") || 0) - (Date.parse(a.updated_at || a.created_at || "") || 0);
+      return dateDiff || Number(b.id || 0) - Number(a.id || 0);
+    });
+    return sorted.slice(1).map(item => item.id);
+  }).filter(Boolean);
+}
+
+function syncInventoryBulkToolbar(visibleRows = filteredInventory()) {
+  const visibleIds = visibleRows.map(car => String(car.id));
+  const selectedVisibleCount = visibleIds.filter(id => selectedInventoryIds.has(id)).length;
+  const selectedTotal = selectedInventoryIds.size;
+  const duplicateCount = duplicateIdsToRemove().length;
+  $("selectedInventoryCount").textContent = `${selectedTotal} selected`;
+  $("duplicateInventoryHint").textContent = duplicateCount
+    ? `${duplicateCount} duplicate row${duplicateCount > 1 ? "s" : ""} detected`
+    : "No duplicates detected";
+  $("deleteSelectedInventory").disabled = selectedTotal === 0;
+  $("removeDuplicateInventory").disabled = duplicateCount === 0;
+  $("clearInventorySelection").disabled = selectedTotal === 0;
+  $("selectAllInventory").checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+  $("selectAllInventory").indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
+}
+
 function renderInventory() {
   $("inventoryTable").innerHTML = filteredInventory().map(car => `
     <tr>
@@ -152,6 +198,25 @@ function renderInventory() {
       <td>${Number(car.units || 1)}</td>
       <td><div class="row-actions"><button data-edit-car="${car.id}">Edit</button><button class="danger" data-delete-car="${car.id}">Delete</button></div></td>
     </tr>`).join("") || `<tr><td colspan="7">Tiada stok dijumpai.</td></tr>`;
+}
+
+function renderInventory() {
+  const visibleRows = filteredInventory();
+  $("inventoryTable").innerHTML = visibleRows.map(car => `
+    <tr>
+      <td class="select-col"><input class="inventory-row-check" type="checkbox" data-select-car="${car.id}" ${selectedInventoryIds.has(String(car.id)) ? "checked" : ""} aria-label="Select ${safeText(car.brand)} ${safeText(car.model)}"></td>
+      <td class="table-main">
+        <b>${safeText(car.brand)} ${safeText(car.model)} ${car.is_featured ? '<span class="mini-badge">FEATURED</span>' : ""}</b>
+        <small>${safeText([car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "-")}</small>
+      </td>
+      <td>${safeText(car.location)}</td>
+      <td><span class="status-chip">${safeText(car.is_active ? car.status : "HIDDEN")}</span></td>
+      <td>${money(car.price)}</td>
+      <td>${km(car.mileage)}</td>
+      <td>${Number(car.units || 1)}</td>
+      <td><div class="row-actions"><button data-edit-car="${car.id}">Edit</button><button class="danger" data-delete-car="${car.id}">Delete</button></div></td>
+    </tr>`).join("") || `<tr><td colspan="8">Tiada stok dijumpai.</td></tr>`;
+  syncInventoryBulkToolbar(visibleRows);
 }
 
 function renderSettings() {
@@ -318,8 +383,15 @@ $("importStarterButton").addEventListener("click", async () => {
 });
 
 $("inventoryTable").addEventListener("click", async event => {
+  const selectId = event.target.dataset.selectCar;
   const editId = event.target.dataset.editCar;
   const deleteId = event.target.dataset.deleteCar;
+  if (selectId) {
+    if (event.target.checked) selectedInventoryIds.add(String(selectId));
+    else selectedInventoryIds.delete(String(selectId));
+    syncInventoryBulkToolbar();
+    return;
+  }
   if (editId) openCarDialog(inventoryRows.find(x => x.id === Number(editId)));
   if (deleteId && confirm("Delete stok ini?")) {
     const { error } = await db.from("inventory").delete().eq("id", deleteId);
@@ -327,6 +399,46 @@ $("inventoryTable").addEventListener("click", async event => {
     toast("Stok dipadam");
     await loadAll();
   }
+});
+
+$("selectAllInventory").addEventListener("change", event => {
+  filteredInventory().forEach(car => {
+    if (event.target.checked) selectedInventoryIds.add(String(car.id));
+    else selectedInventoryIds.delete(String(car.id));
+  });
+  renderInventory();
+});
+
+$("selectVisibleInventory").addEventListener("click", () => {
+  filteredInventory().forEach(car => selectedInventoryIds.add(String(car.id)));
+  renderInventory();
+});
+
+$("clearInventorySelection").addEventListener("click", () => {
+  selectedInventoryIds.clear();
+  renderInventory();
+});
+
+$("deleteSelectedInventory").addEventListener("click", async () => {
+  const ids = [...selectedInventoryIds].map(Number).filter(Boolean);
+  if (!ids.length) return toast("Pilih stok dahulu");
+  if (!confirm(`Delete ${ids.length} selected stok? Action ni tak boleh undo.`)) return;
+  const { error } = await db.from("inventory").delete().in("id", ids);
+  if (error) return toast(error.message);
+  selectedInventoryIds.clear();
+  toast(`${ids.length} stok dipadam`);
+  await loadAll();
+});
+
+$("removeDuplicateInventory").addEventListener("click", async () => {
+  const ids = duplicateIdsToRemove();
+  if (!ids.length) return toast("Tiada duplicate dikesan");
+  if (!confirm(`Remove ${ids.length} duplicate stok? Sistem akan keep satu record terbaru untuk setiap duplicate group.`)) return;
+  const { error } = await db.from("inventory").delete().in("id", ids);
+  if (error) return toast(error.message);
+  ids.forEach(id => selectedInventoryIds.delete(String(id)));
+  toast(`${ids.length} duplicate stok dipadam`);
+  await loadAll();
 });
 
 $("eventsTable").addEventListener("click", async event => {
