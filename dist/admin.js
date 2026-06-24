@@ -9,6 +9,7 @@ let leadRows = [];
 let settingsRow = {};
 let schemaWarnings = [];
 const selectedInventoryIds = new Set();
+let parsedPricelistRows = [];
 
 function toast(message) {
   $("adminToast").textContent = message;
@@ -171,6 +172,166 @@ function duplicateIdsToRemove() {
     });
     return sorted.slice(1).map(item => item.id);
   }).filter(Boolean);
+}
+
+function normalizeHeader(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function parseMoney(value) {
+  const cleaned = String(value || "").replace(/[^\d.]/g, "");
+  return cleaned ? Number(cleaned) : 0;
+}
+
+function parseInteger(value) {
+  const cleaned = String(value || "").replace(/[^\d]/g, "");
+  return cleaned ? Number(cleaned) : null;
+}
+
+function parseBoolean(value) {
+  const text = String(value || "").trim().toLowerCase();
+  return ["1", "yes", "true", "y", "featured", "hot", "active", "available"].includes(text);
+}
+
+function parseDelimitedRows(text) {
+  const delimiter = text.includes("\t") ? "\t" : ",";
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
+    if (char === '"' && quoted && next === '"') {
+      cell += '"';
+      i++;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === delimiter && !quoted) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") i++;
+      row.push(cell.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  row.push(cell.trim());
+  if (row.some(Boolean)) rows.push(row);
+  return rows;
+}
+
+function pickValue(row, headerMap, aliases) {
+  for (const alias of aliases) {
+    const index = headerMap.get(alias);
+    if (index !== undefined) return row[index] || "";
+  }
+  return "";
+}
+
+function inferBrandAndModel(rawBrand, rawModel) {
+  const knownBrands = ["Toyota", "Lexus", "Honda", "Nissan", "Mazda", "Mercedes", "Mercedes-Benz", "BMW", "Audi", "Volkswagen", "Porsche", "Subaru", "Mitsubishi", "Suzuki"];
+  let brand = String(rawBrand || "").trim();
+  let model = String(rawModel || "").trim();
+  if (!brand && model) {
+    const found = knownBrands.find(item => model.toLowerCase().startsWith(item.toLowerCase() + " "));
+    if (found) {
+      brand = found === "Mercedes" ? "Mercedes-Benz" : found;
+      model = model.slice(found.length).trim();
+    }
+  }
+  return { brand, model };
+}
+
+function inventoryImportKey(car) {
+  return [
+    car.brand,
+    car.model,
+    car.year || "",
+    car.grade || "",
+    car.variant || ""
+  ].map(value => String(value || "").trim().toLowerCase()).join("|");
+}
+
+function normalizePricelistRow(row, headerMap, lineNumber) {
+  const rawBrand = pickValue(row, headerMap, ["brand", "make", "maker", "jenama"]);
+  const rawModel = pickValue(row, headerMap, ["model", "modelname", "carmodel", "car", "vehicle", "vehiclename", "name", "nama", "unit"]);
+  const { brand, model } = inferBrandAndModel(rawBrand, rawModel);
+  const price = parseMoney(pickValue(row, headerMap, ["price", "pricerm", "harga", "hargarm", "sellingprice", "sellingpricerm", "otr", "otrrm", "otrprice", "adminprice"]));
+  if (!brand || !model) return { error: `Line ${lineNumber}: brand/model tak cukup` };
+  return {
+    brand,
+    model,
+    year: parseInteger(pickValue(row, headerMap, ["year", "tahun", "manufactureyear", "makeyear"])),
+    grade: pickValue(row, headerMap, ["grade", "gred", "spec", "specification"]),
+    variant: pickValue(row, headerMap, ["variant", "varian", "trim"]),
+    type: pickValue(row, headerMap, ["type", "bodytype", "category", "kategori"]) || "Other",
+    price,
+    mileage: parseInteger(pickValue(row, headerMap, ["mileage", "km", "kilometer", "mileagekm", "mileageinkm"])),
+    status: (pickValue(row, headerMap, ["status", "availability"]) || "AVAILABLE").toUpperCase(),
+    location: pickValue(row, headerMap, ["location", "lokasi", "branch", "yard"]) || "HQ Taman Wahyu",
+    units: parseInteger(pickValue(row, headerMap, ["units", "unit", "qty", "quantity"])) || 1,
+    campaign_tag: pickValue(row, headerMap, ["campaign", "campaigntag", "event", "promo"]),
+    marketing_label: pickValue(row, headerMap, ["label", "marketinglabel", "tag"]),
+    engine: pickValue(row, headerMap, ["engine", "cc"]),
+    transmission: pickValue(row, headerMap, ["transmission", "gearbox"]),
+    exterior_color: pickValue(row, headerMap, ["color", "colour", "exterior", "exteriorcolor", "warna"]),
+    image_url: pickValue(row, headerMap, ["image", "imageurl", "photo", "photourl"]),
+    is_featured: parseBoolean(pickValue(row, headerMap, ["featured", "homepagefeatured"])),
+    is_hot: parseBoolean(pickValue(row, headerMap, ["hot", "hotpick"])),
+    is_active: true,
+    updated_at: new Date().toISOString()
+  };
+}
+
+function parsePricelistText(text) {
+  const rows = parseDelimitedRows(text);
+  if (rows.length < 2) return { records: [], errors: ["File kosong atau header tidak dijumpai."] };
+  const headers = rows[0].map(normalizeHeader);
+  const headerMap = new Map(headers.map((header, index) => [header, index]));
+  const records = [];
+  const errors = [];
+  rows.slice(1).forEach((row, index) => {
+    const normalized = normalizePricelistRow(row, headerMap, index + 2);
+    if (normalized.error) errors.push(normalized.error);
+    else records.push(normalized);
+  });
+  const deduped = [...new Map(records.map(record => [inventoryImportKey(record), record])).values()];
+  return { records: deduped, errors };
+}
+
+function pricelistImportPlan(records = parsedPricelistRows) {
+  const existingMap = new Map(inventoryRows.map(car => [inventoryImportKey(car), car]));
+  const insertRows = [];
+  const updateRows = [];
+  records.forEach(record => {
+    const match = existingMap.get(inventoryImportKey(record));
+    if (match) updateRows.push({ id: match.id, record });
+    else insertRows.push(record);
+  });
+  return { insertRows, updateRows };
+}
+
+function renderPricelistPreview(errors = []) {
+  const { insertRows, updateRows } = pricelistImportPlan();
+  const sample = parsedPricelistRows.slice(0, 4).map(row => `
+    <tr><td>${safeText(row.brand)} ${safeText(row.model)}</td><td>${safeText([row.year, row.grade, row.variant].filter(Boolean).join(" · ") || "-")}</td><td>${money(row.price)}</td><td>${safeText(row.status)}</td></tr>
+  `).join("");
+  $("importPricelistButton").disabled = !parsedPricelistRows.length;
+  $("pricelistPreview").innerHTML = parsedPricelistRows.length ? `
+    <div class="import-stats">
+      <article><span>Valid rows</span><strong>${parsedPricelistRows.length}</strong></article>
+      <article><span>Will update</span><strong>${updateRows.length}</strong></article>
+      <article><span>Will insert</span><strong>${insertRows.length}</strong></article>
+      <article><span>Skipped</span><strong>${errors.length}</strong></article>
+    </div>
+    <table><thead><tr><th>Model</th><th>Spec</th><th>Price</th><th>Status</th></tr></thead><tbody>${sample}</tbody></table>
+    ${errors.length ? `<small>${safeText(errors.slice(0, 3).join(" | "))}${errors.length > 3 ? " ..." : ""}</small>` : ""}
+  ` : `Tiada row valid dijumpai. Pastikan file ada header Brand, Model dan Price.`;
 }
 
 function syncInventoryBulkToolbar(visibleRows = filteredInventory()) {
@@ -407,6 +568,68 @@ $("importStarterButton").addEventListener("click", async () => {
   const { error } = await db.from("inventory").insert(payload);
   if (error) return toast(error.message);
   toast(`${payload.length} stok diimport`);
+  await loadAll();
+});
+
+$("previewPricelistButton").addEventListener("click", async () => {
+  const file = $("pricelistFile").files[0];
+  if (!file) return toast("Pilih file CSV dahulu");
+  if (/\.(xlsx|xls|pdf)$/i.test(file.name)) {
+    return toast("Untuk sekarang upload CSV/TXT. Export Excel pricelist sebagai CSV dahulu.");
+  }
+  const text = await file.text();
+  const { records, errors } = parsePricelistText(text);
+  parsedPricelistRows = records;
+  renderPricelistPreview(errors);
+  toast(`${records.length} row pricelist dibaca`);
+});
+
+$("pricelistFile").addEventListener("change", () => {
+  parsedPricelistRows = [];
+  $("importPricelistButton").disabled = true;
+  $("pricelistPreview").textContent = $("pricelistFile").files[0]?.name || "Belum ada file dipilih.";
+});
+
+$("importPricelistButton").addEventListener("click", async () => {
+  if (!parsedPricelistRows.length) return toast("Preview pricelist dahulu");
+  const mode = $("pricelistMode").value;
+  const { insertRows, updateRows } = pricelistImportPlan();
+  const rowsToInsert = mode === "update" ? [] : insertRows;
+  const rowsToUpdate = mode === "insert" ? [] : updateRows;
+  if (!rowsToInsert.length && !rowsToUpdate.length) return toast("Tiada stok untuk diimport mengikut mode ini");
+  if (!confirm(`Import pricelist sekarang?\n\nUpdate: ${rowsToUpdate.length}\nInsert: ${rowsToInsert.length}`)) return;
+
+  $("importPricelistButton").disabled = true;
+  $("importPricelistButton").textContent = "Importing...";
+
+  if (rowsToInsert.length) {
+    const { error } = await db.from("inventory").insert(rowsToInsert);
+    if (error) {
+      $("importPricelistButton").disabled = false;
+      $("importPricelistButton").textContent = "Import / Update";
+      return toast(error.message);
+    }
+  }
+
+  for (const item of rowsToUpdate) {
+    const { error } = await db.from("inventory").update(item.record).eq("id", item.id);
+    if (error) {
+      $("importPricelistButton").disabled = false;
+      $("importPricelistButton").textContent = "Import / Update";
+      return toast(error.message);
+    }
+  }
+
+  const pricelistDate = $("pricelistDate").value.trim();
+  if (pricelistDate) {
+    await db.from("site_settings").upsert({ id: 1, pricelist_date: pricelistDate, updated_at: new Date().toISOString() });
+  }
+
+  parsedPricelistRows = [];
+  $("pricelistFile").value = "";
+  $("importPricelistButton").textContent = "Import / Update";
+  $("pricelistPreview").innerHTML = `Import complete. Updated ${rowsToUpdate.length}, inserted ${rowsToInsert.length}.`;
+  toast(`Pricelist updated: ${rowsToUpdate.length} update, ${rowsToInsert.length} insert`);
   await loadAll();
 });
 
