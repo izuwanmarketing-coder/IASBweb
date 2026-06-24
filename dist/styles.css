@@ -880,6 +880,23 @@ body.light {
 .car-confidence-strip span { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
 .car-detail-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
 .payment-estimator, .viewing-card { padding: 28px; border: 1px solid var(--line); background: var(--surface); }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+.form-grid label { min-width: 0; display: flex; flex-direction: column; gap: 8px; color: var(--text); font-size: 12px; font-weight: 800; line-height: 1.25; }
+.form-grid input, .form-grid select {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: #090b0c;
+  color: var(--text);
+  padding: 0 12px;
+  outline: 0;
+}
+.form-grid input:focus, .form-grid select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(226,27,35,.12); }
+.form-grid input[type="date"] { color-scheme: dark; }
+.payment-estimator .form-grid, .viewing-card .form-grid { margin: 18px 0 0; }
+.payment-estimator .form-grid label:last-child { grid-column: 1 / -1; }
 .payment-estimator output { display: block; padding: 13px; background: rgba(226,27,35,.10); border: 1px solid rgba(226,27,35,.28); color: var(--text); font: 800 22px "Manrope"; }
 .viewing-card button { min-height: 48px; margin-top: 16px; padding: 0 18px; border: 0; background: var(--accent); color: var(--accent-ink); font-weight: 900; cursor: pointer; }
 .similar-stock { margin-top: 90px; }
@@ -1628,6 +1645,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .car-detail-shell { grid-template-columns: 1fr; }
   .car-detail-media, .car-detail-media img, .car-detail-placeholder { min-height: 420px; }
   .finder-shell, .car-detail-tools { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .payment-estimator .form-grid label:last-child { grid-column: auto; }
   .finder-result { position: static; }
 }
 
