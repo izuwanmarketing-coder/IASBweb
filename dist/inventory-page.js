@@ -7,6 +7,7 @@
   let brand = "all";
   let locationName = "all";
   let status = "all";
+  let budget = "all";
   let sortMode = "latest";
   let visibleLimit = 12;
   let activeGallery = null;
@@ -14,6 +15,7 @@
 
   const money = value => `RM ${Math.round(Number(value) || 0).toLocaleString("en-MY")}`;
   const mileage = value => Number(value) > 0 ? `${Math.round(Number(value)).toLocaleString("en-MY")} km` : "Upon request";
+  const monthlyEstimate = value => Math.round(((Number(value) || 0) * (1 + (0.032 * 9))) / (9 * 12));
   const keyFor = car => `${car.brand}|${car.model}|${car.variant}`.toLowerCase();
   const fallbackPhotoMap = new Map(
     fallbackCars.map((car, index) => [keyFor(car), window.carPhotoData?.[index] || null])
@@ -90,10 +92,12 @@
           <span>${gallery.photos.length} gambar</span>
         </button>`
       : `<div class="inventory-photo inventory-photo-empty"><span>Gambar akan datang</span></div>`;
+    const badges = [car.campaign_tag, car.marketing_label, car.is_hot ? "Hot pick" : "", car.auction_report ? "Auction report" : "", car.mileage_verified ? "Mileage verified" : ""].filter(Boolean);
 
     return `<article class="inventory-card">
       ${media}
       <div class="inventory-card-body">
+        ${badges.length ? `<div class="stock-badges">${badges.map(badge => `<span>${safeText(badge)}</span>`).join("")}</div>` : ""}
         <div class="inventory-meta">
           <span>${safeText(car.brand)} / ${safeText(car.type || "Recond")}</span>
           <b class="stock-status">${safeText(car.status || "AVAILABLE")}</b>
@@ -108,12 +112,12 @@
         </div>
         <div class="inventory-price">
           <strong>${money(car.price)}</strong>
-          <span>${Number(car.units) || 1} unit</span>
+          <span>${money(monthlyEstimate(car.price))}/month est. · ${Number(car.units) || 1} unit</span>
         </div>
         <div class="inventory-actions">
-          <a href="${detailHref}">Details</a>
-          <a href="calculator.html?price=${Number(car.price) || 0}&car=${encodedLabel}">Kira ansuran</a>
-          <a class="outline" data-stock-enquiry href="#">Tanya stok</a>
+          <a href="${detailHref}" data-lead-action="inventory_details" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(`${car.brand} ${car.model}`)}">Details</a>
+          <a href="calculator.html?price=${Number(car.price) || 0}&car=${encodedLabel}" data-lead-action="inventory_calculator" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(`${car.brand} ${car.model}`)}">Kira ansuran</a>
+          <a class="outline" data-stock-enquiry data-lead-action="inventory_whatsapp" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(`${car.brand} ${car.model}`)}" href="#">Tanya stok</a>
         </div>
       </div>
     </article>`;
@@ -135,6 +139,7 @@
       .filter(car => brand === "all" || car.brand === brand)
       .filter(car => locationName === "all" || car.location === locationName)
       .filter(car => status === "all" || car.status === status)
+      .filter(car => budget === "all" || monthlyEstimate(car.price) <= Number(budget))
       .filter(car => !query || [car.brand, car.model, car.year, car.grade, car.variant, car.type, car.location, car.status]
         .join(" ").toLowerCase().includes(query)));
 
@@ -183,12 +188,13 @@
   $("brandFilter").addEventListener("change", event => { visibleLimit = 12; brand = event.target.value; render(); });
   $("locationFilter").addEventListener("change", event => { visibleLimit = 12; locationName = event.target.value; render(); });
   $("statusFilter").addEventListener("change", event => { visibleLimit = 12; status = event.target.value; render(); });
+  $("budgetFilter").addEventListener("change", event => { visibleLimit = 12; budget = event.target.value; render(); });
   $("sortFilter").addEventListener("change", event => { visibleLimit = 12; sortMode = event.target.value; render(); });
   $("clearFilters").addEventListener("click", () => {
     activeType = searchTerm = "";
-    activeType = brand = locationName = status = "all";
+    activeType = brand = locationName = status = budget = "all";
     $("stockSearch").value = "";
-    ["brandFilter", "locationFilter", "statusFilter"].forEach(id => $(id).value = "all");
+    ["brandFilter", "locationFilter", "statusFilter", "budgetFilter"].forEach(id => $(id).value = "all");
     sortMode = "latest";
     visibleLimit = 12;
     $("sortFilter").value = "latest";

@@ -5,6 +5,7 @@ let inventoryRows = [];
 let salesmanRows = [];
 let eventRows = [];
 let deliveryRows = [];
+let leadRows = [];
 let settingsRow = {};
 let schemaWarnings = [];
 const selectedInventoryIds = new Set();
@@ -82,24 +83,27 @@ async function showApp() {
 
 async function loadAll() {
   schemaWarnings = [];
-  const [inventoryData, settingsData, salesmenData, eventsData, deliveriesData] = await Promise.all([
+  const [inventoryData, settingsData, salesmenData, eventsData, deliveriesData, leadsData] = await Promise.all([
     readQuery("Inventory", db.from("inventory").select("*").order("updated_at", { ascending: false }), []),
     readQuery("Settings", db.from("site_settings").select("*").eq("id", 1).maybeSingle(), {}),
     readQuery("Salesmen", db.from("salesmen").select("*").order("name"), []),
     readQuery("Events", db.from("site_events").select("*").order("start_date", { ascending: false }), []),
-    readQuery("Deliveries", db.from("deliveries").select("*").order("sort_order", { ascending: true }).order("delivered_at", { ascending: false }), [])
+    readQuery("Deliveries", db.from("deliveries").select("*").order("sort_order", { ascending: true }).order("delivered_at", { ascending: false }), []),
+    readQuery("Leads", db.from("lead_events").select("*").order("created_at", { ascending: false }).limit(200), [])
   ]);
   inventoryRows = inventoryData;
   settingsRow = settingsData || {};
   salesmanRows = salesmenData;
   eventRows = eventsData;
   deliveryRows = deliveriesData;
+  leadRows = leadsData;
   renderDashboard();
   renderInventory();
   renderSettings();
   renderSalesmen();
   renderEvents();
   renderDeliveries();
+  renderLeads();
   if (schemaWarnings.length) toast("Ada schema baru belum aktif. Run supabase-schema.sql jika perlu.");
 }
 
@@ -109,6 +113,7 @@ function renderDashboard() {
   $("statModels").textContent = activeCars.length;
   $("statIncoming").textContent = activeCars.filter(x => x.status === "INCOMING").reduce((sum, x) => sum + Number(x.units || 1), 0);
   $("statDelivered").textContent = deliveryRows.filter(x => x.is_active).length;
+  $("statLeads").textContent = leadRows.length;
   $("statSalesmen").textContent = salesmanRows.filter(x => x.is_active).length;
 
   const statuses = Object.entries(activeCars.reduce((acc, car) => {
@@ -185,28 +190,12 @@ function syncInventoryBulkToolbar(visibleRows = filteredInventory()) {
 }
 
 function renderInventory() {
-  $("inventoryTable").innerHTML = filteredInventory().map(car => `
-    <tr>
-      <td class="table-main">
-        <b>${safeText(car.brand)} ${safeText(car.model)} ${car.is_featured ? '<span class="mini-badge">FEATURED</span>' : ""}</b>
-        <small>${safeText([car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "-")}</small>
-      </td>
-      <td>${safeText(car.location)}</td>
-      <td><span class="status-chip">${safeText(car.is_active ? car.status : "HIDDEN")}</span></td>
-      <td>${money(car.price)}</td>
-      <td>${km(car.mileage)}</td>
-      <td>${Number(car.units || 1)}</td>
-      <td><div class="row-actions"><button data-edit-car="${car.id}">Edit</button><button class="danger" data-delete-car="${car.id}">Delete</button></div></td>
-    </tr>`).join("") || `<tr><td colspan="7">Tiada stok dijumpai.</td></tr>`;
-}
-
-function renderInventory() {
   const visibleRows = filteredInventory();
   $("inventoryTable").innerHTML = visibleRows.map(car => `
     <tr>
       <td class="select-col"><input class="inventory-row-check" type="checkbox" data-select-car="${car.id}" ${selectedInventoryIds.has(String(car.id)) ? "checked" : ""} aria-label="Select ${safeText(car.brand)} ${safeText(car.model)}"></td>
       <td class="table-main">
-        <b>${safeText(car.brand)} ${safeText(car.model)} ${car.is_featured ? '<span class="mini-badge">FEATURED</span>' : ""}</b>
+        <b>${safeText(car.brand)} ${safeText(car.model)} ${car.is_featured ? '<span class="mini-badge">FEATURED</span>' : ""}${car.campaign_tag ? `<span class="mini-badge">${safeText(car.campaign_tag)}</span>` : ""}${car.is_hot ? '<span class="mini-badge">HOT</span>' : ""}</b>
         <small>${safeText([car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "-")}</small>
       </td>
       <td>${safeText(car.location)}</td>
@@ -263,6 +252,31 @@ function renderDeliveries() {
     </tr>`).join("") || `<tr><td colspan="5">Belum ada delivery. Tambah gambar serahan customer untuk homepage.</td></tr>`;
 }
 
+function renderLeads() {
+  const byAction = leadRows.reduce((acc, lead) => {
+    acc[lead.action || "unknown"] = (acc[lead.action || "unknown"] || 0) + 1;
+    return acc;
+  }, {});
+  $("leadSummary").innerHTML = Object.entries(byAction).slice(0, 6).map(([action, count]) => `
+    <article><span>${safeText(action)}</span><strong>${count}</strong></article>
+  `).join("") || `<p class="admin-help">Belum ada lead click. Deploy lead tracker dahulu atau tunggu traffic masuk.</p>`;
+
+  $("leadsTable").innerHTML = leadRows.map(lead => `
+    <tr>
+      <td>${formatLeadTime(lead.created_at)}</td>
+      <td>${safeText(lead.page)}</td>
+      <td><span class="status-chip">${safeText(lead.action)}</span></td>
+      <td class="table-main"><b>${safeText(lead.label || lead.car_name || "-")}</b><small>${safeText(lead.car_name || lead.source_url || "-")}</small></td>
+      <td>${lead.source_url ? `<a href="${safeText(lead.source_url)}" target="_blank" rel="noopener">Open</a>` : ""}</td>
+    </tr>`).join("") || `<tr><td colspan="5">Belum ada lead.</td></tr>`;
+}
+
+function formatLeadTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-MY", { dateStyle: "short", timeStyle: "short" });
+}
+
 function openCarDialog(car = {}) {
   $("carDialogTitle").textContent = car.id ? "Edit stok" : "Tambah stok";
   $("carId").value = car.id || "";
@@ -277,9 +291,21 @@ function openCarDialog(car = {}) {
   $("carStatus").value = car.status || "AVAILABLE";
   $("carLocation").value = car.location || "";
   $("carUnits").value = car.units || 1;
+  $("carCampaignTag").value = car.campaign_tag || "";
+  $("carMarketingLabel").value = car.marketing_label || "";
+  $("carEngine").value = car.engine || "";
+  $("carTransmission").value = car.transmission || "";
+  $("carExteriorColor").value = car.exterior_color || "";
+  $("carInteriorColor").value = car.interior_color || "";
+  $("carDescription").value = car.description || "";
+  $("carGalleryUrls").value = Array.isArray(car.gallery_urls) ? car.gallery_urls.join("\n") : "";
   $("carImageUrl").value = car.image_url || "";
   $("carActive").checked = car.is_active ?? true;
   $("carFeatured").checked = Boolean(car.is_featured);
+  $("carHot").checked = Boolean(car.is_hot);
+  $("carAuctionReport").checked = Boolean(car.auction_report);
+  $("carMileageVerified").checked = Boolean(car.mileage_verified);
+  $("carGradeVerified").checked = Boolean(car.grade_verified);
   $("carDialog").showModal();
 }
 
@@ -306,6 +332,7 @@ function openEventDialog(event = {}) {
   $("eventStart").value = event.start_date || "";
   $("eventEnd").value = event.end_date || "";
   $("eventLocation").value = event.location || "";
+  $("eventCampaignTag").value = event.campaign_tag || event.title || "";
   $("eventCtaLabel").value = event.cta_label || "WhatsApp untuk info lanjut";
   $("eventCtaMessage").value = event.cta_message || "";
   $("eventBannerUrl").value = event.banner_url || "";
@@ -368,6 +395,7 @@ $("addCarButton").addEventListener("click", () => openCarDialog());
 $("addSalesmanButton").addEventListener("click", () => openSalesmanDialog());
 $("addEventButton").addEventListener("click", () => openEventDialog({ title: "E-Carnival Stock Clearance", kicker: "SPECIAL EVENT", cta_label: "WhatsApp untuk info lanjut" }));
 $("addDeliveryButton").addEventListener("click", () => openDeliveryDialog({ title: "Delivered by Izuwan", location: "HQ Taman Wahyu" }));
+$("refreshLeadsButton").addEventListener("click", loadAll);
 $("importStarterButton").addEventListener("click", async () => {
   if (inventoryRows.length && !confirm("Inventory sudah ada. Import juga stok asal?")) return;
   const payload = (window.inventoryData || []).map(car => ({
@@ -418,6 +446,30 @@ $("clearInventorySelection").addEventListener("click", () => {
   selectedInventoryIds.clear();
   renderInventory();
 });
+
+async function updateSelectedInventory(payload, successLabel) {
+  const ids = [...selectedInventoryIds].map(Number).filter(Boolean);
+  if (!ids.length) return toast("Pilih stok dahulu");
+  const { error } = await db.from("inventory").update({ ...payload, updated_at: new Date().toISOString() }).in("id", ids);
+  if (error) return toast(error.message);
+  toast(`${ids.length} stok ${successLabel}`);
+  await loadAll();
+}
+
+$("applyBulkStatus").addEventListener("click", () => {
+  const status = $("bulkStatusSelect").value;
+  if (!status) return toast("Pilih status dahulu");
+  updateSelectedInventory({ status }, `ditukar ke ${status}`);
+});
+
+$("applyBulkCampaign").addEventListener("click", () => {
+  const campaign = $("bulkCampaignInput").value.trim();
+  if (!campaign) return toast("Isi campaign tag dahulu");
+  updateSelectedInventory({ campaign_tag: campaign }, "dimasukkan ke campaign");
+});
+
+$("bulkFeaturedOn").addEventListener("click", () => updateSelectedInventory({ is_featured: true }, "featured"));
+$("bulkFeaturedOff").addEventListener("click", () => updateSelectedInventory({ is_featured: false }, "unfeatured"));
 
 $("deleteSelectedInventory").addEventListener("click", async () => {
   const ids = [...selectedInventoryIds].map(Number).filter(Boolean);
@@ -480,8 +532,20 @@ $("carForm").addEventListener("submit", async event => {
     status: $("carStatus").value,
     location: $("carLocation").value.trim(),
     units: Number($("carUnits").value) || 1,
+    campaign_tag: $("carCampaignTag").value.trim(),
+    marketing_label: $("carMarketingLabel").value.trim(),
+    engine: $("carEngine").value.trim(),
+    transmission: $("carTransmission").value.trim(),
+    exterior_color: $("carExteriorColor").value.trim(),
+    interior_color: $("carInteriorColor").value.trim(),
+    description: $("carDescription").value.trim(),
+    gallery_urls: $("carGalleryUrls").value.split(/\r?\n/).map(url => url.trim()).filter(Boolean),
     image_url: $("carImageUrl").value.trim(),
     is_featured: $("carFeatured").checked,
+    is_hot: $("carHot").checked,
+    auction_report: $("carAuctionReport").checked,
+    mileage_verified: $("carMileageVerified").checked,
+    grade_verified: $("carGradeVerified").checked,
     is_active: $("carActive").checked,
     updated_at: new Date().toISOString()
   };
@@ -513,6 +577,7 @@ $("eventForm").addEventListener("submit", async event => {
     start_date: $("eventStart").value || null,
     end_date: $("eventEnd").value || null,
     location: $("eventLocation").value.trim(),
+    campaign_tag: $("eventCampaignTag").value.trim(),
     cta_label: $("eventCtaLabel").value.trim() || "WhatsApp untuk info lanjut",
     cta_message: $("eventCtaMessage").value.trim(),
     banner_url: bannerUrl,

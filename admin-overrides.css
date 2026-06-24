@@ -44,7 +44,7 @@ textarea {
 }
 
 .stats-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .event-summary {
@@ -115,7 +115,9 @@ textarea {
   justify-content: flex-end;
 }
 
-.bulk-actions button {
+.bulk-actions button,
+.bulk-actions select,
+.bulk-actions input {
   min-height: 38px;
   padding: 0 12px;
   border: 1px solid var(--line);
@@ -125,6 +127,11 @@ textarea {
   font-size: 11px;
   font-weight: 800;
   cursor: pointer;
+}
+
+.bulk-actions input {
+  min-width: 160px;
+  cursor: text;
 }
 
 .bulk-actions button:disabled {
@@ -152,6 +159,33 @@ textarea {
   accent-color: var(--accent);
 }
 
+.lead-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.lead-summary article {
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.03);
+}
+
+.lead-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+
+.lead-summary strong {
+  display: block;
+  margin-top: 9px;
+  font: 800 28px "Manrope";
+}
+
 @media (max-width: 850px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -176,7 +210,13 @@ textarea {
     justify-content: stretch;
   }
 
-  .bulk-actions button {
+  .bulk-actions button,
+  .bulk-actions select,
+  .bulk-actions input {
     flex: 1;
+  }
+
+  .lead-summary {
+    grid-template-columns: 1fr;
   }
 }

@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260624-3">
-  <link rel="stylesheet" href="admin-overrides.css?v=20260624-3">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="admin.css?v=20260624-4">
+  <link rel="stylesheet" href="admin-overrides.css?v=20260624-4">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="manifest" href="site.webmanifest">
@@ -37,6 +37,7 @@
         <button class="admin-nav" data-page="inventory">Inventory</button>
         <button class="admin-nav" data-page="events">Events</button>
         <button class="admin-nav" data-page="delivered">Delivered</button>
+        <button class="admin-nav" data-page="leads">Leads</button>
         <button class="admin-nav" data-page="settings">Site & OTR</button>
         <button class="admin-nav" data-page="salesmen">Salesmen</button>
       </nav>
@@ -56,6 +57,7 @@
           <article><span>Model aktif</span><strong id="statModels">0</strong></article>
           <article><span>Incoming</span><strong id="statIncoming">0</strong></article>
           <article><span>Delivered</span><strong id="statDelivered">0</strong></article>
+          <article><span>Lead clicks</span><strong id="statLeads">0</strong></article>
           <article><span>Salesmen</span><strong id="statSalesmen">0</strong></article>
         </div>
         <div class="dashboard-grid">
@@ -83,6 +85,12 @@
           <div class="bulk-toolbar" id="inventoryBulkToolbar">
             <div><strong id="selectedInventoryCount">0 selected</strong><span id="duplicateInventoryHint">Checking duplicates...</span></div>
             <div class="bulk-actions">
+              <select id="bulkStatusSelect"><option value="">Set status...</option><option>AVAILABLE</option><option>INCOMING</option><option>DONE PAID DUTI</option><option>PORT KLANG</option><option>SOLD</option><option>BOOKED</option></select>
+              <input id="bulkCampaignInput" placeholder="Campaign tag">
+              <button type="button" id="applyBulkStatus">Apply status</button>
+              <button type="button" id="applyBulkCampaign">Apply campaign</button>
+              <button type="button" id="bulkFeaturedOn">Feature</button>
+              <button type="button" id="bulkFeaturedOff">Unfeature</button>
               <button type="button" id="selectVisibleInventory">Select visible</button>
               <button type="button" id="clearInventorySelection">Clear</button>
               <button type="button" class="danger" id="deleteSelectedInventory">Delete selected</button>
@@ -93,6 +101,23 @@
             <table>
               <thead><tr><th class="select-col"><input id="selectAllInventory" type="checkbox" aria-label="Select all visible inventory"></th><th>Model</th><th>Lokasi</th><th>Status</th><th>Harga</th><th>Mileage</th><th>Unit</th><th></th></tr></thead>
               <tbody id="inventoryTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-page" data-page-panel="leads">
+        <div class="admin-card">
+          <div class="card-title">
+            <div><span>LEAD TRACKING</span><h2>Website leads</h2></div>
+            <button id="refreshLeadsButton">Refresh</button>
+          </div>
+          <p class="admin-help">Track clicks dari WhatsApp, car detail, calculator, event dan Find My Car wizard. Data ni membantu tengok page mana paling banyak convert.</p>
+          <div class="lead-summary" id="leadSummary"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Time</th><th>Page</th><th>Action</th><th>Label / Car</th><th></th></tr></thead>
+              <tbody id="leadsTable"></tbody>
             </table>
           </div>
         </div>
@@ -178,9 +203,21 @@
         <label>Status<select id="carStatus"><option>AVAILABLE</option><option>INCOMING</option><option>DONE PAID DUTI</option><option>PORT KLANG</option><option>SOLD</option><option>BOOKED</option></select></label>
         <label>Lokasi<input id="carLocation"></label>
         <label>Jumlah unit<input id="carUnits" type="number" min="1" value="1"></label>
+        <label>Campaign tag<input id="carCampaignTag" placeholder="E-Carnival Stock Clearance"></label>
+        <label>Marketing label<input id="carMarketingLabel" placeholder="Hot deal / New arrival"></label>
+        <label>Engine<input id="carEngine" placeholder="2.5L / 3.5L / Hybrid"></label>
+        <label>Transmission<input id="carTransmission" placeholder="Automatic"></label>
+        <label>Exterior color<input id="carExteriorColor" placeholder="Pearl White"></label>
+        <label>Interior color<input id="carInteriorColor" placeholder="Black / Beige"></label>
+        <label class="wide">Description<textarea id="carDescription" rows="3" placeholder="Short customer-facing notes, condition highlight, package, etc."></textarea></label>
+        <label class="wide">Gallery URLs<textarea id="carGalleryUrls" rows="3" placeholder="One image URL per line"></textarea></label>
         <label class="wide">Main image URL<input id="carImageUrl" placeholder="https://..."></label>
         <label class="check-label"><input id="carActive" type="checkbox" checked> Paparkan di website</label>
         <label class="check-label"><input id="carFeatured" type="checkbox"> Featured di homepage</label>
+        <label class="check-label"><input id="carHot" type="checkbox"> Hot pick</label>
+        <label class="check-label"><input id="carAuctionReport" type="checkbox"> Auction report available</label>
+        <label class="check-label"><input id="carMileageVerified" type="checkbox"> Mileage verified</label>
+        <label class="check-label"><input id="carGradeVerified" type="checkbox"> Grade verified</label>
       </div>
       <div class="dialog-actions"><button type="button" data-close-dialog="carDialog">Batal</button><button class="accent-btn" id="saveCarButton" value="default">Simpan stok</button></div>
     </form>
@@ -196,6 +233,7 @@
         <label>Tarikh mula<input id="eventStart" type="date"></label>
         <label>Tarikh tamat<input id="eventEnd" type="date"></label>
         <label>Lokasi<input id="eventLocation" placeholder="Izuwan Automobile HQ Taman Wahyu"></label>
+        <label>Campaign stock tag<input id="eventCampaignTag" placeholder="E-Carnival Stock Clearance"></label>
         <label>CTA button<input id="eventCtaLabel" placeholder="WhatsApp untuk info lanjut"></label>
         <label class="wide">Ringkasan pendek<input id="eventSubtitle" placeholder="Special stock clearance untuk selected ready stock."></label>
         <label class="wide">Details<textarea id="eventDescription" rows="4" placeholder="Masukkan info event, benefit, syarat ringkas atau arahan untuk customer."></textarea></label>
@@ -247,10 +285,10 @@
 
   <div class="admin-toast" id="adminToast"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20260624-3"></script>
-  <script src="data-service.js?v=20260624-3"></script>
-  <script src="inventory.js?v=20260624-3"></script>
-  <script src="admin.js?v=20260624-3"></script>
+  <script src="config.js?v=20260624-4"></script>
+  <script src="data-service.js?v=20260624-4"></script>
+  <script src="inventory.js?v=20260624-4"></script>
+  <script src="admin.js?v=20260624-4"></script>
 </body>
 </html>
 

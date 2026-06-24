@@ -19,7 +19,7 @@
   <meta name="twitter:image" content="https://thjzzfvoxqqvkgvrdjpr.supabase.co/storage/v1/object/public/branding/company-logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260624-2">
+  <link rel="stylesheet" href="styles.css?v=20260624-4">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
@@ -29,7 +29,7 @@
   <header class="topbar page-topbar">
     <a class="brand" href="index.html"><img class="brand-logo hidden" data-brand-logo alt="Logo"><span class="brand-mark" data-brand-mark>IA</span><span><strong data-brand-name>IZUWAN</strong><small>AUTOMOBILE</small></span></a>
     <button class="menu-btn" id="menuButton" aria-label="Buka menu" aria-expanded="false">Menu</button>
-    <nav class="site-nav" id="siteNav"><a href="index.html">Home</a><a href="about.html">About</a><a href="inventory.html">Inventory</a><a href="select-programme.html">Select Programme</a><a href="contact.html">Contact</a><a class="tool-nav-link" href="calculator.html">Tools</a></nav>
+    <nav class="site-nav" id="siteNav"><a href="index.html">Home</a><a href="about.html">About</a><a href="inventory.html">Inventory</a><a href="find-car.html">Find My Car</a><a href="select-programme.html">Select Programme</a><a href="contact.html">Contact</a><a class="tool-nav-link" href="calculator.html">Tools</a></nav>
     <div class="top-actions"><a class="header-cta" href="calculator.html">Semak Bajet</a><button class="icon-btn" id="themeButton" aria-label="Tukar tema"></button></div>
   </header>
   <main class="inner-main">
@@ -56,6 +56,7 @@
         <div class="stock-select"><label for="brandFilter">Brand</label><select id="brandFilter"><option value="all">Semua brand</option></select></div>
         <div class="stock-select"><label for="locationFilter">Lokasi</label><select id="locationFilter"><option value="all">Semua lokasi</option></select></div>
         <div class="stock-select"><label for="statusFilter">Status</label><select id="statusFilter"><option value="all">Semua status</option><option>AVAILABLE</option><option>INCOMING</option><option>DONE PAID DUTI</option><option>PORT KLANG</option></select></div>
+        <div class="stock-select"><label for="budgetFilter">Monthly</label><select id="budgetFilter"><option value="all">Semua bajet</option><option value="1800">Below RM1,800</option><option value="2500">Below RM2,500</option><option value="3500">Below RM3,500</option><option value="5000">Below RM5,000</option></select></div>
         <div class="stock-select"><label for="sortFilter">Susun</label><select id="sortFilter"><option value="latest">Latest Arrival</option><option value="price-low">Lowest Price</option><option value="price-high">Highest Price</option><option value="mileage-low">Lowest Mileage</option></select></div>
         <button class="clear-filters" id="clearFilters">Reset filter</button>
       </div>
@@ -66,7 +67,7 @@
     <div class="photo-lightbox"><button class="photo-close" id="photoClose">×</button><button class="photo-nav photo-prev" id="photoPrev">‹</button><img id="photoLarge" alt="Gambar kereta"><button class="photo-nav photo-next" id="photoNext">›</button><div class="photo-caption"><div><strong id="photoTitle"></strong><span id="photoCounter"></span></div><a id="photoDriveLink" target="_blank" rel="noopener">Buka semua gambar ↗</a></div></div>
   </dialog>
   <footer class="site-footer"><div class="brand muted"><span class="brand-mark">IA</span><span><strong data-brand-name>IZUWAN</strong><small>AUTOMOBILE</small></span></div><nav><a href="about.html">About</a><a href="select-programme.html">Select Programme</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></nav><p>Japan Reconditioned Car Specialist · Since 2011</p></footer>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=20260624-2"></script><script src="data-service.js?v=20260624-2"></script><script src="inventory.js?v=20260624-2"></script><script src="car-photos.js?v=20260624-2"></script><script src="photo-curation.js?v=20260624-2"></script><script src="site.js?v=20260624-2"></script><script src="inventory-page.js?v=20260624-2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=20260624-4"></script><script src="data-service.js?v=20260624-4"></script><script src="inventory.js?v=20260624-4"></script><script src="car-photos.js?v=20260624-4"></script><script src="photo-curation.js?v=20260624-4"></script><script src="site.js?v=20260624-4"></script><script src="lead-tracker.js?v=20260624-4"></script><script src="inventory-page.js?v=20260624-4"></script>
 </body>
 </html>
 

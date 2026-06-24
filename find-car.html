@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Find My Car | Izuwan Automobile</title>
+  <meta name="description" content="Jawab beberapa soalan ringkas dan Izuwan Automobile akan bantu cadangkan kereta recond Jepun yang sesuai dengan bajet, lifestyle dan keperluan anda.">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <link rel="canonical" href="https://izuwanautomobile.com/find-car.html">
+  <meta property="og:url" content="https://izuwanautomobile.com/find-car.html">
+  <meta property="og:site_name" content="Izuwan Automobile">
+  <meta property="og:locale" content="ms_MY">
+  <meta property="og:title" content="Find My Car | Izuwan Automobile">
+  <meta property="og:description" content="Dapatkan cadangan kereta recond Jepun berdasarkan bajet bulanan, family size dan keperluan anda.">
+  <meta property="og:image" content="https://thjzzfvoxqqvkgvrdjpr.supabase.co/storage/v1/object/public/branding/company-logo.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=20260624-4">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="manifest" href="site.webmanifest">
+</head>
+<body>
+  <header class="topbar page-topbar">
+    <a class="brand" href="index.html"><img class="brand-logo hidden" data-brand-logo alt="Logo"><span class="brand-mark" data-brand-mark>IA</span><span><strong data-brand-name>IZUWAN</strong><small>AUTOMOBILE</small></span></a>
+    <button class="menu-btn" id="menuButton" aria-label="Buka menu" aria-expanded="false">Menu</button>
+    <nav class="site-nav" id="siteNav"><a href="index.html">Home</a><a href="about.html">About</a><a href="inventory.html">Inventory</a><a href="find-car.html">Find My Car</a><a href="select-programme.html">Select Programme</a><a href="contact.html">Contact</a><a class="tool-nav-link" href="calculator.html">Tools</a></nav>
+    <div class="top-actions"><a class="header-cta" href="contact.html">Visit HQ</a><button class="icon-btn" id="themeButton" aria-label="Tukar tema"></button></div>
+  </header>
+
+  <main class="inner-main">
+    <div class="promotion-banner hidden" data-promotion-banner></div>
+    <section class="page-hero find-hero">
+      <span class="eyebrow">PERSONALISED MATCHING</span>
+      <h1>Find the right<br>Japan recond car.</h1>
+      <p>Tak pasti nak model apa? Jawab beberapa soalan dan kami akan bantu shortlist pilihan yang paling sesuai dengan bajet, family dan cara penggunaan anda.</p>
+    </section>
+
+    <section class="finder-shell">
+      <form class="finder-form" id="finderForm">
+        <div class="finder-step">
+          <span>01</span>
+          <h2>Budget & ownership</h2>
+          <div class="form-grid">
+            <label>Anggaran bajet bulanan
+              <select id="finderBudget">
+                <option value="1800">Below RM1,800/month</option>
+                <option value="2500">RM1,800–RM2,500/month</option>
+                <option value="3500">RM2,500–RM3,500/month</option>
+                <option value="5000">RM3,500+/month</option>
+              </select>
+            </label>
+            <label>Urgency
+              <select id="finderUrgency">
+                <option>Ready stock / urgent</option>
+                <option>Can wait for the right unit</option>
+                <option>Just researching first</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="finder-step">
+          <span>02</span>
+          <h2>Lifestyle</h2>
+          <div class="option-grid" id="finderUsage">
+            <label><input type="radio" name="usage" value="Family / balik kampung" checked><b>Family comfort</b><small>Spacious, reliable, long distance</small></label>
+            <label><input type="radio" name="usage" value="Executive / business"><b>Executive feel</b><small>Premium, comfortable, presentable</small></label>
+            <label><input type="radio" name="usage" value="Daily SUV"><b>Daily SUV</b><small>Easy drive, higher stance</small></label>
+            <label><input type="radio" name="usage" value="Performance / enthusiast"><b>Enthusiast</b><small>Power, handling, unique spec</small></label>
+          </div>
+        </div>
+        <div class="finder-step">
+          <span>03</span>
+          <h2>Preference</h2>
+          <div class="form-grid">
+            <label>Seats needed
+              <select id="finderSeats">
+                <option>5 seats</option>
+                <option selected>7 seats</option>
+                <option>8 seats</option>
+              </select>
+            </label>
+            <label>Preferred brand/model
+              <input id="finderPreference" placeholder="Contoh: Alphard, Vellfire, Harrier, Prado">
+            </label>
+          </div>
+          <button class="hero-primary finder-submit" type="submit">Get recommendation <span>→</span></button>
+        </div>
+      </form>
+      <aside class="finder-result" id="finderResult">
+        <span class="eyebrow">MATCH RESULT</span>
+        <h2>Cadangan akan keluar di sini.</h2>
+        <p>Isi preference anda dan kami akan susun cadangan model + WhatsApp message yang lengkap untuk advisor.</p>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="site-footer"><div class="brand muted"><span class="brand-mark">IA</span><span><strong data-brand-name>IZUWAN</strong><small>AUTOMOBILE</small></span></div><nav><a href="about.html">About</a><a href="inventory.html">Inventory</a><a href="select-programme.html">Select Programme</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></nav><p>Japan Reconditioned Car Specialist · Since 2011</p></footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=20260624-4"></script><script src="data-service.js?v=20260624-4"></script><script src="site.js?v=20260624-4"></script><script src="lead-tracker.js?v=20260624-4"></script><script src="find-car-page.js?v=20260624-4"></script>
+</body>
+</html>

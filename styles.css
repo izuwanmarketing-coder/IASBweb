@@ -504,7 +504,7 @@ body.light {
 .text-link { display: inline-block; margin-top: 18px; color: var(--accent); text-decoration: none; font-weight: 700; }
 .home-services {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   border: 1px solid var(--line);
 }
 .home-services article { min-height: 290px; padding: 30px; background: var(--surface); }
@@ -607,6 +607,8 @@ body.light {
 .inventory-actions { margin-top: 18px; }
 .inventory-actions a { flex: 1; min-height: 42px; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); text-decoration: none; font-size: 10px; font-weight: 800; }
 .inventory-actions a.outline { border: 1px solid var(--line); background: transparent; color: var(--text); }
+.stock-badges, .car-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.stock-badges span, .car-badges span { padding: 6px 8px; border: 1px solid rgba(226,27,35,.35); background: rgba(226,27,35,.10); color: var(--accent); font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
 
 .profile-grid { display: grid; grid-template-columns: 1.05fr .95fr; margin: 90px 0; background: var(--surface); }
 .profile-image { min-height: 590px; overflow: hidden; }
@@ -856,6 +858,13 @@ body.light {
 .car-detail-price { margin: 26px 0; padding: 20px; background: rgba(226,27,35,.11); border: 1px solid rgba(226,27,35,.28); }
 .car-detail-price span { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .16em; }
 .car-detail-price strong { display: block; margin-top: 4px; font: 800 clamp(30px, 4vw, 46px) "Manrope"; letter-spacing: -.06em; }
+.car-detail-price em { display: block; margin-top: 7px; color: var(--muted); font-style: normal; font-size: 12px; }
+.car-main-image { width: 100%; height: 100%; min-height: 620px; object-fit: cover; display: block; }
+.car-thumbs { position: absolute; left: 18px; right: 18px; bottom: 18px; display: flex; gap: 8px; overflow-x: auto; padding: 8px; background: rgba(0,0,0,.48); backdrop-filter: blur(10px); }
+.car-detail-media { position: relative; overflow: hidden; }
+.car-thumbs button { width: 74px; height: 54px; flex: 0 0 auto; padding: 0; border: 1px solid rgba(255,255,255,.24); background: #111; cursor: pointer; opacity: .72; }
+.car-thumbs button.active { opacity: 1; border-color: var(--accent); }
+.car-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .car-spec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
 .car-spec-grid div { padding: 13px; border: 1px solid var(--line); background: rgba(255,255,255,.02); }
 .car-spec-grid span { display: block; color: var(--muted); font-size: 9px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
@@ -869,6 +878,40 @@ body.light {
 .car-confidence-strip article + article { border-left: 1px solid var(--line); }
 .car-confidence-strip strong { display: block; font: 800 18px "Manrope"; }
 .car-confidence-strip span { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
+.car-detail-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+.payment-estimator, .viewing-card { padding: 28px; border: 1px solid var(--line); background: var(--surface); }
+.payment-estimator output { display: block; padding: 13px; background: rgba(226,27,35,.10); border: 1px solid rgba(226,27,35,.28); color: var(--text); font: 800 22px "Manrope"; }
+.viewing-card button { min-height: 48px; margin-top: 16px; padding: 0 18px; border: 0; background: var(--accent); color: var(--accent-ink); font-weight: 900; cursor: pointer; }
+.similar-stock { margin-top: 90px; }
+.similar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 22px; }
+.similar-card { padding: 22px; border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; transition: transform .2s ease, border-color .2s ease; }
+.similar-card:hover { transform: translateY(-3px); border-color: rgba(226,27,35,.42); }
+.similar-card span { color: var(--accent); font-size: 9px; font-weight: 900; letter-spacing: .12em; }
+.similar-card h3 { margin: 18px 0 6px; font-size: 22px; letter-spacing: -.05em; }
+.similar-card p { min-height: 38px; color: var(--muted); font-size: 11px; }
+.similar-card strong { font: 800 18px "Manrope"; }
+
+.finder-shell { display: grid; grid-template-columns: 1.08fr .92fr; gap: 16px; margin-bottom: 90px; }
+.finder-form, .finder-result { padding: clamp(26px,4vw,46px); border: 1px solid var(--line); background: var(--surface); }
+.finder-step + .finder-step { margin-top: 34px; padding-top: 28px; border-top: 1px solid var(--line); }
+.finder-step > span { color: var(--accent); font-size: 10px; font-weight: 900; letter-spacing: .18em; }
+.finder-step h2, .finder-result h2 { margin: 8px 0 18px; font-size: clamp(26px,3vw,38px); letter-spacing: -.05em; }
+.option-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; }
+.option-grid label { display: block; padding: 15px; border: 1px solid var(--line); background: rgba(255,255,255,.02); cursor: pointer; }
+.option-grid input { margin-right: 8px; accent-color: var(--accent); }
+.option-grid b { display: block; margin-top: 8px; }
+.option-grid small { display: block; margin-top: 4px; color: var(--muted); }
+.finder-submit { margin-top: 22px; border: 0; cursor: pointer; }
+.finder-result { position: sticky; top: 110px; align-self: start; }
+.finder-models { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+.finder-models span { padding: 8px 10px; border: 1px solid rgba(226,27,35,.35); color: var(--accent); font-size: 11px; font-weight: 900; }
+.finder-summary { display: grid; gap: 8px; margin: 18px 0; }
+.finder-summary div { padding: 12px; border: 1px solid var(--line); }
+.finder-summary b, .finder-summary span { display: block; }
+.finder-summary span { color: var(--muted); font-size: 12px; }
+.finder-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.finder-actions a { min-height: 48px; padding: 0 16px; display: inline-flex; align-items: center; background: var(--accent); color: var(--accent-ink); text-decoration: none; font-weight: 900; font-size: 11px; }
+.finder-actions a.outline { border: 1px solid var(--line); background: transparent; color: var(--text); }
 .programme-feature {
   display: grid;
   grid-template-columns: .9fr 1.1fr;
@@ -1496,6 +1539,54 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   font-weight: 900;
 }
 
+.event-stock-strip {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.event-stock-strip h3 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.event-stock-strip > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.event-stock-strip a {
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.025);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.event-stock-strip a span,
+.event-stock-strip a small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.event-stock-strip a b,
+.event-stock-strip a strong {
+  display: block;
+}
+
+.event-stock-strip a b {
+  margin: 6px 0 3px;
+  font-size: 13px;
+}
+
+.event-stock-strip a strong {
+  margin-top: 8px;
+  color: var(--accent);
+  font-size: 12px;
+}
+
 .event-detail-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1536,6 +1627,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .delivered-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .car-detail-shell { grid-template-columns: 1fr; }
   .car-detail-media, .car-detail-media img, .car-detail-placeholder { min-height: 420px; }
+  .finder-shell, .car-detail-tools { grid-template-columns: 1fr; }
+  .finder-result { position: static; }
 }
 
 @media (max-width: 980px) {
@@ -1544,9 +1637,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 @media (max-width: 600px) {
-  .delivered-grid, .car-spec-grid, .car-confidence-strip { grid-template-columns: 1fr; }
+  .delivered-grid, .car-spec-grid, .car-confidence-strip, .similar-grid, .option-grid, .event-stock-strip > div { grid-template-columns: 1fr; }
   .car-confidence-strip article + article { border-left: 0; border-top: 1px solid var(--line); }
   .car-detail-actions a { width: 100%; }
+  .car-thumbs { position: static; background: var(--surface); border-top: 1px solid var(--line); }
 }
 
 @media (max-width: 560px) {
