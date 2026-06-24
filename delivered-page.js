@@ -7,7 +7,7 @@
       title: "Premium recond handover",
       model: "Japan reconditioned selection",
       location: "HQ Taman Wahyu",
-      caption: "Customer delivery moments akan dipaparkan di sini bila gambar dimasukkan melalui admin."
+      caption: "Team Izuwan membantu customer memilih unit recond Jepun dengan proses yang lebih jelas dan yakin."
     },
     {
       title: "Loan, insurance & handover",
@@ -19,7 +19,7 @@
       title: "Ready stock confidence",
       model: "Viewed, selected, delivered",
       location: "Kuala Lumpur",
-      caption: "Tambah gambar delivery sebenar untuk kuatkan trust dan social proof website."
+      caption: "Datang view ready stock di HQ atau WhatsApp advisor untuk semak availability terkini."
     }
   ];
 
