@@ -43,6 +43,29 @@
     return (inventory || []).filter(car => String(car.campaign_tag || "").trim().toLowerCase() === tag).slice(0, 8);
   }
 
+  function formatEventDescription(text) {
+    const fallback = "Event khas Izuwan Automobile sedang berlangsung.";
+    const raw = String(text || fallback).replace(/\r/g, "").trim();
+    if (!raw) return `<p>${safeText(fallback)}</p>`;
+
+    const paragraphs = raw.split(/\n\s*\n/).map(block => block.trim()).filter(Boolean);
+    if (paragraphs.length > 1) {
+      return paragraphs.map(block => `<p>${safeText(block)}</p>`).join("");
+    }
+
+    const normalized = raw.replace(/\s*[|]\s*/g, " | ").replace(/\s*[•·]\s*/g, " | ");
+    const chunks = normalized.split(/\s+\|\s+/).map(chunk => chunk.trim()).filter(Boolean);
+    if (chunks.length >= 3) {
+      const [intro, ...items] = chunks;
+      return `
+        <p>${safeText(intro)}</p>
+        <ul>${items.map(item => `<li>${safeText(item)}</li>`).join("")}</ul>
+      `;
+    }
+
+    return `<p>${safeText(raw)}</p>`;
+  }
+
   function renderCampaignCars(event, inventory) {
     const cars = campaignCars(event, inventory);
     if (!cars.length) return "";
@@ -82,7 +105,7 @@
         <div class="event-detail-copy">
           <small>${safeText(event.kicker || "SPECIAL EVENT")}</small>
           <h2>${safeText(event.title)}</h2>
-          <p>${safeText(event.description || event.subtitle || "Event khas Izuwan Automobile sedang berlangsung.")}</p>
+          <div class="event-description">${formatEventDescription(event.description || event.subtitle || "Event khas Izuwan Automobile sedang berlangsung.")}</div>
           <div class="event-detail-meta">
             <span>${safeText(countdownText(event))}</span>
             ${dateText ? `<span>${safeText(dateText)}</span>` : ""}

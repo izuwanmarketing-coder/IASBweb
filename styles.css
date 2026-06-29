@@ -1471,7 +1471,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .event-detail-card {
   display: grid;
-  grid-template-columns: minmax(280px, 44%) 1fr;
+  grid-template-columns: minmax(320px, 46%) minmax(0, 1fr);
   min-height: 430px;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1479,7 +1479,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .event-detail-media {
-  min-height: 360px;
+  min-height: 100%;
   display: grid;
   place-items: center;
   background:
@@ -1504,7 +1504,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   padding: clamp(28px, 5vw, 62px);
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .event-detail-copy small {
@@ -1516,20 +1516,39 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .event-detail-copy h2 {
   margin: 10px 0 14px;
-  font-size: clamp(34px, 5vw, 62px);
+  font-size: clamp(30px, 4vw, 56px);
+  line-height: .96;
   letter-spacing: -.07em;
+  max-width: 12ch;
 }
 
-.event-detail-copy p {
+.event-description {
+  max-width: 66ch;
+}
+
+.event-description p {
+  margin: 0 0 12px;
   color: var(--muted);
-  font-size: 16px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.event-description ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.event-description li {
+  margin: 0 0 8px;
+  line-height: 1.65;
 }
 
 .event-detail-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 18px;
+  margin-top: 12px;
 }
 
 .event-detail-meta span {
@@ -1637,6 +1656,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
   .event-detail-media {
     min-height: 260px;
+  }
+
+  .event-detail-copy h2 {
+    max-width: none;
   }
 }
 
