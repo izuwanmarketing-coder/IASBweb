@@ -16,6 +16,67 @@
   color: var(--ink);
 }
 
+.inventory-admin-hero {
+  display: grid;
+  grid-template-columns: .95fr 1.25fr;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, rgba(226, 27, 35, .12), rgba(255,255,255,.03));
+}
+
+.inventory-admin-hero h3 {
+  margin: 7px 0 8px;
+  font: 800 28px "Manrope";
+  letter-spacing: -.05em;
+}
+
+.inventory-admin-hero p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.inventory-quick-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.inventory-quick-stats article {
+  padding: 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.16);
+}
+
+.inventory-quick-stats span,
+.inventory-quick-stats strong,
+.inventory-quick-stats small {
+  display: block;
+}
+
+.inventory-quick-stats span,
+.media-inline-copy span {
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.inventory-quick-stats strong {
+  margin-top: 8px;
+  font: 800 26px "Manrope";
+}
+
+.inventory-quick-stats small {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 textarea {
   font: inherit;
 }
@@ -146,6 +207,173 @@ textarea {
 
 .bulk-actions .soft-danger {
   background: rgba(226, 27, 35, .10);
+}
+
+.media-inline-panel {
+  margin: 12px 0 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.025);
+}
+
+.media-inline-copy h3 {
+  margin: 8px 0 6px;
+  font: 800 20px "Manrope";
+  letter-spacing: -.04em;
+}
+
+.media-inline-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.media-inline-actions {
+  margin-top: 14px;
+}
+
+.media-inline-actions button,
+.photo-manager-upload button,
+.photo-manager-upload input {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.18);
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+}
+
+.media-inline-actions button:disabled {
+  opacity: .45;
+}
+
+.photo-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.photo-preview-card,
+.photo-manager-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.03);
+}
+
+.photo-preview-card img,
+.photo-manager-card img {
+  width: 100%;
+  aspect-ratio: 1.1;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-preview-card span {
+  display: block;
+  padding: 9px 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.photo-preview-card.main,
+.photo-manager-card.main {
+  border-color: rgba(226, 27, 35, .45);
+}
+
+.photo-preview-empty {
+  grid-column: 1 / -1;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.photo-manager-shell {
+  width: min(1040px, calc(100vw - 32px));
+}
+
+.photo-manager-upload {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.photo-manager-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.photo-manager-summary article {
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.025);
+}
+
+.photo-manager-summary span,
+.photo-manager-summary strong {
+  display: block;
+}
+
+.photo-manager-summary span {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+
+.photo-manager-summary strong {
+  margin-top: 8px;
+  font: 800 22px "Manrope";
+}
+
+.photo-manager-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.photo-manager-meta {
+  padding: 12px;
+}
+
+.photo-manager-meta b,
+.photo-manager-meta small {
+  display: block;
+}
+
+.photo-manager-meta small {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.photo-manager-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.photo-manager-actions button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.photo-manager-actions .danger {
+  border-color: rgba(226, 27, 35, .45);
+  color: var(--accent);
 }
 
 .pricelist-importer {
@@ -309,6 +537,17 @@ textarea {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .inventory-admin-hero,
+  .photo-manager-upload,
+  .photo-manager-summary,
+  .photo-manager-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .photo-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 520px) {
@@ -329,6 +568,12 @@ textarea {
   .bulk-actions select,
   .bulk-actions input {
     flex: 1;
+  }
+
+  .inventory-quick-stats,
+  .photo-preview-grid,
+  .photo-manager-actions {
+    grid-template-columns: 1fr;
   }
 
   .pricelist-importer,

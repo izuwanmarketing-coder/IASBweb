@@ -10,6 +10,7 @@ let settingsRow = {};
 let schemaWarnings = [];
 const selectedInventoryIds = new Set();
 let parsedPricelistRows = [];
+let photoManagerCarId = null;
 
 function toast(message) {
   $("adminToast").textContent = message;
@@ -33,6 +34,36 @@ function safeText(value, fallback = "-") {
 
 function km(value) {
   return Number(value) > 0 ? `${Number(value).toLocaleString("en-MY")} km` : "-";
+}
+
+function slugify(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") || "stock";
+}
+
+function uniqueUrls(urls) {
+  return [...new Set((urls || []).map(url => String(url || "").trim()).filter(Boolean))];
+}
+
+function publicUrlToStoragePath(url) {
+  const marker = "/storage/v1/object/public/branding/";
+  const value = String(url || "");
+  if (!value.includes(marker)) return "";
+  const path = value.split(marker)[1] || "";
+  return decodeURIComponent(path.split("?")[0]);
+}
+
+function buildBrandingPublicUrl(path) {
+  return db.storage.from("branding").getPublicUrl(path).data.publicUrl;
+}
+
+function getCarGallery(car = {}) {
+  return uniqueUrls([
+    car.image_url || "",
+    ...(Array.isArray(car.gallery_urls) ? car.gallery_urls : [])
+  ]);
 }
 
 function formatDate(value) {
@@ -422,6 +453,37 @@ function renderPricelistPreview(errors = []) {
   ` : `Tiada row valid dijumpai. Pastikan file ada header Brand, Model dan Price.`;
 }
 
+function renderInventoryQuickStats(visibleRows = filteredInventory()) {
+  const active = visibleRows.filter(car => car.is_active);
+  const featured = active.filter(car => car.is_featured).length;
+  const withPhotos = active.filter(car => getCarGallery(car).length > 0).length;
+  const hidden = visibleRows.filter(car => !car.is_active).length;
+  const totalUnits = active.reduce((sum, car) => sum + Number(car.units || 1), 0);
+  $("inventoryQuickStats").innerHTML = [
+    ["Visible stock", `${active.length}`, `${totalUnits} unit live`],
+    ["Featured", `${featured}`, "Homepage picks"],
+    ["With photos", `${withPhotos}`, "Gallery attached"],
+    ["Hidden", `${hidden}`, "Draft / hidden"]
+  ].map(([label, value, hint]) => `
+    <article>
+      <span>${safeText(label)}</span>
+      <strong>${safeText(value)}</strong>
+      <small>${safeText(hint)}</small>
+    </article>
+  `).join("");
+}
+
+function renderCarPhotoPreview(car = {}) {
+  const gallery = getCarGallery(car);
+  $("carPhotoPreview").innerHTML = gallery.length ? gallery.slice(0, 6).map((url, index) => `
+    <article class="photo-preview-card ${index === 0 ? "main" : ""}">
+      <img src="${safeText(url)}" alt="Stock photo ${index + 1}">
+      <span>${index === 0 ? "Main image" : `Gallery ${index}`}</span>
+    </article>
+  `).join("") : `<div class="photo-preview-empty">Belum ada gambar. Simpan stok dulu, kemudian buka photo manager untuk upload banyak gambar sekali.</div>`;
+  $("openCarPhotoManager").disabled = !car.id;
+}
+
 function syncInventoryBulkToolbar(visibleRows = filteredInventory()) {
   const visibleIds = visibleRows.map(car => String(car.id));
   const selectedVisibleCount = visibleIds.filter(id => selectedInventoryIds.has(id)).length;
@@ -434,6 +496,8 @@ function syncInventoryBulkToolbar(visibleRows = filteredInventory()) {
   $("deleteSelectedInventory").disabled = selectedTotal === 0;
   $("removeDuplicateInventory").disabled = duplicateCount === 0;
   $("clearInventorySelection").disabled = selectedTotal === 0;
+  $("bulkOpenPhotoManager").disabled = selectedTotal !== 1;
+  $("bulkPhotoManagerButton").disabled = selectedTotal !== 1;
   $("selectAllInventory").checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
   $("selectAllInventory").indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
 }
@@ -606,6 +670,137 @@ function openDeliveryDialog(item = {}) {
   $("deliveryDialog").showModal();
 }
 
+function updateCarGalleryFields(urls) {
+  const list = uniqueUrls(urls);
+  $("carImageUrl").value = list[0] || "";
+  $("carGalleryUrls").value = list.slice(1).join("\n");
+}
+
+function findCarById(id) {
+  return inventoryRows.find(car => Number(car.id) === Number(id));
+}
+
+async function saveCarMediaState(carId, urls) {
+  const gallery = uniqueUrls(urls);
+  const payload = {
+    image_url: gallery[0] || "",
+    gallery_urls: gallery.slice(1),
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await db.from("inventory").update(payload).eq("id", carId);
+  if (error) throw error;
+  return payload;
+}
+
+async function uploadFilesForCar(car, files) {
+  const slug = `${slugify(car.brand)}-${slugify(car.model)}-${car.id || Date.now()}`;
+  const uploaded = [];
+  for (const file of files) {
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `stock/${slug}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: uploadError } = await db.storage.from("branding").upload(path, file, { upsert: true });
+    if (uploadError) throw uploadError;
+    uploaded.push(buildBrandingPublicUrl(path));
+  }
+  return uploaded;
+}
+
+function renderPhotoManager(carId = photoManagerCarId) {
+  const car = findCarById(carId);
+  if (!car) {
+    $("photoManagerTitle").textContent = "Photo manager";
+    $("photoManagerSummary").innerHTML = "";
+    $("photoManagerGrid").innerHTML = `<div class="photo-preview-empty">Pilih satu stock dahulu untuk manage gambar.</div>`;
+    return;
+  }
+  const gallery = getCarGallery(car);
+  $("photoManagerCarId").value = String(car.id);
+  $("photoManagerTitle").textContent = `${car.brand} ${car.model} photo manager`;
+  $("photoManagerSummary").innerHTML = `
+    <article><span>Main image</span><strong>${gallery[0] ? "Ready" : "Missing"}</strong></article>
+    <article><span>Total photos</span><strong>${gallery.length}</strong></article>
+    <article><span>Stock</span><strong>${safeText(car.status || "AVAILABLE")}</strong></article>
+  `;
+  $("photoManagerGrid").innerHTML = gallery.length ? gallery.map((url, index) => `
+    <article class="photo-manager-card ${index === 0 ? "main" : ""}">
+      <img src="${safeText(url)}" alt="Photo ${index + 1}">
+      <div class="photo-manager-meta">
+        <b>${index === 0 ? "Main image" : `Gallery ${index}`}</b>
+        <small>${safeText(url.split("/").pop()?.split("?")[0] || "photo")}</small>
+      </div>
+      <div class="photo-manager-actions">
+        <button type="button" data-photo-main="${index}" ${index === 0 ? "disabled" : ""}>Set main</button>
+        <button type="button" data-photo-left="${index}" ${index === 0 ? "disabled" : ""}>Move left</button>
+        <button type="button" data-photo-right="${index}" ${index === gallery.length - 1 ? "disabled" : ""}>Move right</button>
+        <button type="button" class="danger" data-photo-remove="${index}">Remove</button>
+      </div>
+    </article>
+  `).join("") : `<div class="photo-preview-empty">Belum ada gambar untuk stock ini. Upload beberapa gambar untuk mula bina gallery.</div>`;
+}
+
+async function openPhotoManager(carId) {
+  const car = findCarById(carId);
+  if (!car) return toast("Stock tak dijumpai");
+  photoManagerCarId = Number(carId);
+  renderPhotoManager(photoManagerCarId);
+  $("photoManagerFiles").value = "";
+  $("photoManagerDialog").showModal();
+}
+
+renderInventory = function renderInventoryEnhanced() {
+  const visibleRows = filteredInventory();
+  renderInventoryQuickStats(visibleRows);
+  $("inventoryTable").innerHTML = visibleRows.map(car => `
+    <tr>
+      <td class="select-col"><input class="inventory-row-check" type="checkbox" data-select-car="${car.id}" ${selectedInventoryIds.has(String(car.id)) ? "checked" : ""} aria-label="Select ${safeText(car.brand)} ${safeText(car.model)}"></td>
+      <td class="table-main">
+        <b>${safeText(car.brand)} ${safeText(car.model)} ${car.is_featured ? '<span class="mini-badge">FEATURED</span>' : ""}${car.campaign_tag ? `<span class="mini-badge">${safeText(car.campaign_tag)}</span>` : ""}${car.is_hot ? '<span class="mini-badge">HOT</span>' : ""}</b>
+        <small>${safeText([car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "-")}</small>
+        <small>${getCarGallery(car).length ? `${getCarGallery(car).length} photos attached` : "No photos yet"}</small>
+      </td>
+      <td>${safeText(car.location)}</td>
+      <td><span class="status-chip">${safeText(car.is_active ? car.status : "HIDDEN")}</span></td>
+      <td>${money(car.price)}</td>
+      <td>${km(car.mileage)}</td>
+      <td>${Number(car.units || 1)}</td>
+      <td><div class="row-actions"><button data-edit-car="${car.id}">Edit</button><button data-photos-car="${car.id}">Photos</button><button class="danger" data-delete-car="${car.id}">Delete</button></div></td>
+    </tr>`).join("") || `<tr><td colspan="8">Tiada stok dijumpai.</td></tr>`;
+  syncInventoryBulkToolbar(visibleRows);
+};
+
+openCarDialog = function openCarDialogEnhanced(car = {}) {
+  $("carDialogTitle").textContent = car.id ? "Edit stok" : "Tambah stok";
+  $("carId").value = car.id || "";
+  $("carBrand").value = car.brand || "";
+  $("carModel").value = car.model || "";
+  $("carYear").value = car.year || "";
+  $("carGrade").value = car.grade || "";
+  $("carVariant").value = car.variant || "";
+  $("carType").value = car.type || "MPV";
+  $("carAdminPrice").value = car.price || "";
+  $("carMileage").value = car.mileage || "";
+  $("carStatus").value = car.status || "AVAILABLE";
+  $("carLocation").value = car.location || "";
+  $("carUnits").value = car.units || 1;
+  $("carCampaignTag").value = car.campaign_tag || "";
+  $("carMarketingLabel").value = car.marketing_label || "";
+  $("carEngine").value = car.engine || "";
+  $("carTransmission").value = car.transmission || "";
+  $("carExteriorColor").value = car.exterior_color || "";
+  $("carInteriorColor").value = car.interior_color || "";
+  $("carDescription").value = car.description || "";
+  $("carGalleryUrls").value = Array.isArray(car.gallery_urls) ? car.gallery_urls.join("\n") : "";
+  $("carImageUrl").value = car.image_url || "";
+  $("carActive").checked = car.is_active ?? true;
+  $("carFeatured").checked = Boolean(car.is_featured);
+  $("carHot").checked = Boolean(car.is_hot);
+  $("carAuctionReport").checked = Boolean(car.auction_report);
+  $("carMileageVerified").checked = Boolean(car.mileage_verified);
+  $("carGradeVerified").checked = Boolean(car.grade_verified);
+  renderCarPhotoPreview(car);
+  $("carDialog").showModal();
+};
+
 $("loginForm").addEventListener("submit", async event => {
   event.preventDefault();
   $("loginMessage").textContent = "";
@@ -641,6 +836,31 @@ document.querySelectorAll("[data-close-dialog]").forEach(button => button.addEve
 $("adminStockSearch").addEventListener("input", renderInventory);
 $("adminStockStatus").addEventListener("change", renderInventory);
 $("addCarButton").addEventListener("click", () => openCarDialog());
+$("carImageUrl").addEventListener("input", () => renderCarPhotoPreview({
+  id: $("carId").value,
+  image_url: $("carImageUrl").value,
+  gallery_urls: $("carGalleryUrls").value.split(/\r?\n/).map(url => url.trim()).filter(Boolean)
+}));
+$("carGalleryUrls").addEventListener("input", () => renderCarPhotoPreview({
+  id: $("carId").value,
+  image_url: $("carImageUrl").value,
+  gallery_urls: $("carGalleryUrls").value.split(/\r?\n/).map(url => url.trim()).filter(Boolean)
+}));
+$("openCarPhotoManager").addEventListener("click", () => {
+  const carId = Number($("carId").value);
+  if (!carId) return toast("Simpan stok dahulu sebelum urus gambar");
+  openPhotoManager(carId);
+});
+$("bulkPhotoManagerButton").addEventListener("click", () => {
+  const ids = [...selectedInventoryIds].map(Number).filter(Boolean);
+  if (ids.length !== 1) return toast("Pilih satu stok dahulu untuk bulk upload gambar");
+  openPhotoManager(ids[0]);
+});
+$("bulkOpenPhotoManager").addEventListener("click", () => {
+  const ids = [...selectedInventoryIds].map(Number).filter(Boolean);
+  if (ids.length !== 1) return toast("Pilih satu stok dahulu untuk manage gambar");
+  openPhotoManager(ids[0]);
+});
 $("addSalesmanButton").addEventListener("click", () => openSalesmanDialog());
 $("addEventButton").addEventListener("click", () => openEventDialog({ title: "E-Carnival Stock Clearance", kicker: "SPECIAL EVENT", cta_label: "WhatsApp untuk info lanjut" }));
 $("addDeliveryButton").addEventListener("click", () => openDeliveryDialog({ title: "Delivered by Izuwan", location: "HQ Taman Wahyu" }));
@@ -734,6 +954,7 @@ $("importPricelistButton").addEventListener("click", async () => {
 $("inventoryTable").addEventListener("click", async event => {
   const selectId = event.target.dataset.selectCar;
   const editId = event.target.dataset.editCar;
+  const photosId = event.target.dataset.photosCar;
   const deleteId = event.target.dataset.deleteCar;
   if (selectId) {
     if (event.target.checked) selectedInventoryIds.add(String(selectId));
@@ -742,6 +963,7 @@ $("inventoryTable").addEventListener("click", async event => {
     return;
   }
   if (editId) openCarDialog(inventoryRows.find(x => x.id === Number(editId)));
+  if (photosId) return openPhotoManager(Number(photosId));
   if (deleteId && confirm("Delete stok ini?")) {
     const { error } = await db.from("inventory").delete().eq("id", deleteId);
     if (error) return toast(error.message);
@@ -766,6 +988,72 @@ $("selectVisibleInventory").addEventListener("click", () => {
 $("clearInventorySelection").addEventListener("click", () => {
   selectedInventoryIds.clear();
   renderInventory();
+});
+
+$("photoManagerUploadButton").addEventListener("click", async () => {
+  const carId = Number($("photoManagerCarId").value || photoManagerCarId);
+  const car = findCarById(carId);
+  const files = [...$("photoManagerFiles").files];
+  if (!car) return toast("Stock tak dijumpai");
+  if (!files.length) return toast("Pilih gambar dahulu");
+  $("photoManagerUploadButton").disabled = true;
+  $("photoManagerUploadButton").textContent = "Uploading...";
+  try {
+    const uploaded = await uploadFilesForCar(car, files);
+    const nextGallery = uniqueUrls([...getCarGallery(car), ...uploaded]);
+    await saveCarMediaState(car.id, nextGallery);
+    toast(`${uploaded.length} gambar dimuat naik`);
+    await loadAll();
+    renderPhotoManager(car.id);
+    renderCarPhotoPreview(findCarById(car.id) || car);
+    $("photoManagerFiles").value = "";
+  } catch (error) {
+    toast(error.message || "Upload gambar gagal");
+  } finally {
+    $("photoManagerUploadButton").disabled = false;
+    $("photoManagerUploadButton").textContent = "Upload selected photos";
+  }
+});
+
+$("photoManagerGrid").addEventListener("click", async event => {
+  const carId = Number($("photoManagerCarId").value || photoManagerCarId);
+  const car = findCarById(carId);
+  if (!car) return;
+  const mainIndex = event.target.dataset.photoMain;
+  const leftIndex = event.target.dataset.photoLeft;
+  const rightIndex = event.target.dataset.photoRight;
+  const removeIndex = event.target.dataset.photoRemove;
+  let gallery = [...getCarGallery(car)];
+
+  if (mainIndex !== undefined) {
+    const index = Number(mainIndex);
+    gallery = [gallery[index], ...gallery.filter((_, i) => i !== index)];
+  }
+  if (leftIndex !== undefined) {
+    const index = Number(leftIndex);
+    [gallery[index - 1], gallery[index]] = [gallery[index], gallery[index - 1]];
+  }
+  if (rightIndex !== undefined) {
+    const index = Number(rightIndex);
+    [gallery[index], gallery[index + 1]] = [gallery[index + 1], gallery[index]];
+  }
+  if (removeIndex !== undefined) {
+    const index = Number(removeIndex);
+    const removedUrl = gallery[index];
+    gallery.splice(index, 1);
+    const storagePath = publicUrlToStoragePath(removedUrl);
+    if (storagePath) await db.storage.from("branding").remove([storagePath]);
+  }
+
+  try {
+    await saveCarMediaState(car.id, gallery);
+    await loadAll();
+    renderPhotoManager(car.id);
+    renderCarPhotoPreview(findCarById(car.id) || car);
+    toast("Gallery updated");
+  } catch (error) {
+    toast(error.message || "Gallery update gagal");
+  }
 });
 
 async function updateSelectedInventory(payload, successLabel) {
@@ -841,6 +1129,10 @@ $("deliveriesTable").addEventListener("click", async event => {
 $("carForm").addEventListener("submit", async event => {
   event.preventDefault();
   const id = $("carId").value;
+  const manualGallery = uniqueUrls([
+    $("carImageUrl").value.trim(),
+    ...$("carGalleryUrls").value.split(/\r?\n/).map(url => url.trim()).filter(Boolean)
+  ]);
   const payload = {
     brand: $("carBrand").value.trim(),
     model: $("carModel").value.trim(),
@@ -860,8 +1152,8 @@ $("carForm").addEventListener("submit", async event => {
     exterior_color: $("carExteriorColor").value.trim(),
     interior_color: $("carInteriorColor").value.trim(),
     description: $("carDescription").value.trim(),
-    gallery_urls: $("carGalleryUrls").value.split(/\r?\n/).map(url => url.trim()).filter(Boolean),
-    image_url: $("carImageUrl").value.trim(),
+    gallery_urls: manualGallery.slice(1),
+    image_url: manualGallery[0] || "",
     is_featured: $("carFeatured").checked,
     is_hot: $("carHot").checked,
     auction_report: $("carAuctionReport").checked,

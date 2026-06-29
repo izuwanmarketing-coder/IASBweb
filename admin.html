@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260624-6">
-  <link rel="stylesheet" href="admin-overrides.css?v=20260624-6">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="admin.css?v=20260630-2">
+  <link rel="stylesheet" href="admin-overrides.css?v=20260630-2">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="manifest" href="site.webmanifest">
@@ -76,7 +76,15 @@
         <div class="admin-card">
           <div class="card-title">
             <div><span>STOCK MANAGEMENT</span><h2>Inventory</h2></div>
-            <div class="header-actions"><button id="importStarterButton">Import stok asal</button><button class="accent-btn" id="addCarButton">+ Tambah stok</button></div>
+            <div class="header-actions"><button id="importStarterButton">Import stok asal</button><button id="bulkPhotoManagerButton">Bulk photo upload</button><button class="accent-btn" id="addCarButton">+ Tambah stok</button></div>
+          </div>
+          <div class="inventory-admin-hero">
+            <div>
+              <span>WORKFLOW</span>
+              <h3>Urus stock, gambar, campaign dan visibility dari satu tempat.</h3>
+              <p>Guna quick actions di bawah untuk pilih stok, bulk update status, upload banyak gambar dan keep homepage featured section sentiasa fresh.</p>
+            </div>
+            <div class="inventory-quick-stats" id="inventoryQuickStats"></div>
           </div>
           <div class="admin-filters">
             <input id="adminStockSearch" type="search" placeholder="Cari model, brand, lokasi...">
@@ -110,6 +118,7 @@
               <button type="button" id="applyBulkCampaign">Apply campaign</button>
               <button type="button" id="bulkFeaturedOn">Feature</button>
               <button type="button" id="bulkFeaturedOff">Unfeature</button>
+              <button type="button" id="bulkOpenPhotoManager">Manage photos</button>
               <button type="button" id="selectVisibleInventory">Select visible</button>
               <button type="button" id="clearInventorySelection">Clear</button>
               <button type="button" class="danger" id="deleteSelectedInventory">Delete selected</button>
@@ -231,6 +240,17 @@
         <label class="wide">Description<textarea id="carDescription" rows="3" placeholder="Short customer-facing notes, condition highlight, package, etc."></textarea></label>
         <label class="wide">Gallery URLs<textarea id="carGalleryUrls" rows="3" placeholder="One image URL per line"></textarea></label>
         <label class="wide">Main image URL<input id="carImageUrl" placeholder="https://..."></label>
+        <div class="wide media-inline-panel">
+          <div class="media-inline-copy">
+            <span>PHOTO MANAGEMENT</span>
+            <h3>Manage visual gallery</h3>
+            <p>Untuk stock sedia ada, buka photo manager untuk upload banyak gambar, set main image, susun gallery dan remove gambar lama.</p>
+          </div>
+          <div class="media-inline-actions">
+            <button type="button" id="openCarPhotoManager">Open photo manager</button>
+          </div>
+          <div class="photo-preview-grid" id="carPhotoPreview"></div>
+        </div>
         <label class="check-label"><input id="carActive" type="checkbox" checked> Paparkan di website</label>
         <label class="check-label"><input id="carFeatured" type="checkbox"> Featured di homepage</label>
         <label class="check-label"><input id="carHot" type="checkbox"> Hot pick</label>
@@ -240,6 +260,24 @@
       </div>
       <div class="dialog-actions"><button type="button" data-close-dialog="carDialog">Batal</button><button class="accent-btn" id="saveCarButton" value="default">Simpan stok</button></div>
     </form>
+  </dialog>
+
+  <dialog id="photoManagerDialog">
+    <div class="dialog-card photo-manager-shell">
+      <div class="card-title">
+        <div><span>STOCK PHOTOS</span><h2 id="photoManagerTitle">Photo manager</h2></div>
+        <button class="close-dialog" type="button" data-close-dialog="photoManagerDialog">×</button>
+      </div>
+      <p class="admin-help" id="photoManagerHint">Upload banyak gambar sekali, pilih main image, susun gallery dan remove gambar yang tak pakai.</p>
+      <input id="photoManagerCarId" type="hidden">
+      <div class="photo-manager-upload">
+        <input id="photoManagerFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+        <button type="button" class="accent-btn" id="photoManagerUploadButton">Upload selected photos</button>
+      </div>
+      <div class="photo-manager-summary" id="photoManagerSummary"></div>
+      <div class="photo-manager-grid" id="photoManagerGrid"></div>
+      <div class="dialog-actions"><button type="button" data-close-dialog="photoManagerDialog">Done</button></div>
+    </div>
   </dialog>
 
   <dialog id="eventDialog">
@@ -304,10 +342,10 @@
 
   <div class="admin-toast" id="adminToast"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20260624-4"></script>
-  <script src="data-service.js?v=20260624-4"></script>
-  <script src="inventory.js?v=20260624-4"></script>
-  <script src="admin.js?v=20260624-6"></script>
+  <script src="config.js?v=20260630-2"></script>
+  <script src="data-service.js?v=20260630-2"></script>
+  <script src="inventory.js?v=20260630-2"></script>
+  <script src="admin.js?v=20260630-2"></script>
 </body>
 </html>
 
