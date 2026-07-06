@@ -61,6 +61,155 @@ Balance downpayment: ${$("otrBalance").textContent}
     setTimeout(() => toast.classList.remove("show"), 1800);
   }
 
+  function pdfFilename(model, date) {
+    const safeModel = model
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 45);
+    return `QUOTATION-${safeModel || "VEHICLE"}-${date}.pdf`;
+  }
+
+  function saveQuotationPdf() {
+    const JsPdf = window.jspdf?.jsPDF;
+    if (!JsPdf) {
+      showToast("PDF generator belum tersedia. Sila cuba lagi.");
+      return;
+    }
+
+    calculate();
+    const doc = new JsPdf({ unit: "mm", format: "a4" });
+    const model = $("vehicleName").value.trim() || "Vehicle not specified";
+    const now = new Date();
+    const dateCode = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("");
+    const reference = `IA-${dateCode}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+    const company = window.IASBSite?.settings?.company_name || "Izuwan Automobile";
+    const selectedSalesman = salesmen.length
+      ? salesmen.find(person => person.whatsapp === $("salesmanSelect").value)
+      : null;
+    const rows = [
+      ["Selling price", money(value("otrSellingPrice"))],
+      ["Roadtax", money(value("otrRoadtax"))],
+      ["Registration / ownership", money(value("otrRegistration"))],
+      ["Processing fee", money(value("otrProcessing"))],
+      ["Warranty", money(value("otrWarranty"))],
+      [`Insurance (NCD ${$("otrNcd").value}%)`, money(value("otrInsurance"))],
+      ["Windscreen cover", money(value("otrWindscreen"))]
+    ];
+
+    doc.setFillColor(226, 27, 35);
+    doc.rect(0, 0, 210, 45, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(19);
+    doc.text(company.toUpperCase(), 16, 19);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text("JAPAN RECONDITIONED CAR SPECIALIST", 16, 27);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(21);
+    doc.text("QUOTATION", 194, 20, { align: "right" });
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Reference: ${reference}`, 194, 28, { align: "right" });
+    doc.text(`Date: ${now.toLocaleDateString("en-MY", { day: "2-digit", month: "short", year: "numeric" })}`, 194, 34, { align: "right" });
+
+    doc.setTextColor(25, 25, 25);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(110, 110, 110);
+    doc.text("VEHICLE / MODEL", 16, 58);
+    doc.setTextColor(20, 20, 20);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(doc.splitTextToSize(model, 178), 16, 66);
+
+    let y = 82;
+    doc.setFillColor(245, 245, 245);
+    doc.rect(16, y - 7, 178, 10, "F");
+    doc.setFontSize(8);
+    doc.setTextColor(90, 90, 90);
+    doc.text("TRANSACTION BREAKDOWN", 20, y);
+    y += 10;
+    rows.forEach(([label, amount]) => {
+      doc.setDrawColor(224, 224, 224);
+      doc.line(16, y + 4, 194, y + 4);
+      doc.setTextColor(65, 65, 65);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(label, 20, y);
+      doc.setTextColor(20, 20, 20);
+      doc.setFont("helvetica", "bold");
+      doc.text(amount, 190, y, { align: "right" });
+      y += 9;
+    });
+
+    doc.setFillColor(20, 20, 20);
+    doc.rect(16, y, 178, 17, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.text("TOTAL ON-THE-ROAD PRICE", 20, y + 7);
+    doc.setFontSize(15);
+    doc.text($("otrTotal").textContent, 190, y + 11, { align: "right" });
+    y += 27;
+
+    const paymentRows = [
+      ["Loan amount", money(value("otrLoanAmount"))],
+      ["Total payable (downpayment)", $("otrPayable").textContent],
+      ["Booking paid", money(value("otrBooking"))],
+      ["Downpayment paid", money(value("otrDownpaymentPaid"))]
+    ];
+    doc.setTextColor(90, 90, 90);
+    doc.setFontSize(8);
+    doc.text("PAYMENT SUMMARY", 16, y);
+    y += 9;
+    paymentRows.forEach(([label, amount]) => {
+      doc.setTextColor(70, 70, 70);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(label, 20, y);
+      doc.setTextColor(20, 20, 20);
+      doc.setFont("helvetica", "bold");
+      doc.text(amount, 190, y, { align: "right" });
+      y += 9;
+    });
+
+    doc.setFillColor(226, 27, 35);
+    doc.rect(16, y, 178, 16, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("BALANCE DOWNPAYMENT", 20, y + 10);
+    doc.setFontSize(14);
+    doc.text($("otrBalance").textContent, 190, y + 10, { align: "right" });
+    y += 29;
+
+    if (selectedSalesman) {
+      doc.setTextColor(90, 90, 90);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text("PREPARED BY", 16, y);
+      doc.setTextColor(20, 20, 20);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text(selectedSalesman.name, 16, y + 7);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text([selectedSalesman.role, selectedSalesman.branch, selectedSalesman.whatsapp].filter(Boolean).join(" | "), 16, y + 13);
+    }
+
+    doc.setDrawColor(220, 220, 220);
+    doc.line(16, 272, 194, 272);
+    doc.setTextColor(105, 105, 105);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.text("This quotation is an initial estimate only. Insurance, warranty, roadtax and financing are subject to final confirmation.", 16, 279);
+    doc.text(`${company}  |  izuwanautomobile.com`, 16, 286);
+    doc.save(pdfFilename(model, dateCode));
+    showToast("Quotation PDF disimpan");
+  }
+
   fieldIds.forEach(id => $(id).addEventListener("input", calculate));
   $("otrCopyButton").addEventListener("click", async () => {
     try {
@@ -74,7 +223,7 @@ Balance downpayment: ${$("otrBalance").textContent}
     const number = salesmen.length ? $("salesmanSelect").value : "";
     window.open(window.IASBSite.whatsappUrl(summary(), number), "_blank", "noopener");
   });
-  $("printQuotationButton").addEventListener("click", () => window.print());
+  $("printQuotationButton").addEventListener("click", saveQuotationPdf);
 
   window.addEventListener("iasb:data", event => {
     const settings = event.detail.settings;
