@@ -37,6 +37,8 @@
     return `IZUWAN AUTOMOBILE - TRANSACTION BREAKDOWN
 
 Model: ${$("vehicleName").value.trim() || "Belum ditetapkan"}
+Pelanggan: ${$("customerName").value.trim() || "Belum ditetapkan"}
+Telefon: ${$("customerPhone").value.trim() || "Belum ditetapkan"}
 Selling price: ${$("otrLineSelling").textContent}
 Roadtax: ${$("otrLineRoadtax").textContent}
 Registration / ownership: ${$("otrLineRegistration").textContent}
@@ -80,6 +82,8 @@ Balance downpayment: ${$("otrBalance").textContent}
     calculate();
     const doc = new JsPdf({ unit: "mm", format: "a4" });
     const model = $("vehicleName").value.trim() || "Vehicle not specified";
+    const customerName = $("customerName").value.trim() || "Not specified";
+    const customerPhone = $("customerPhone").value.trim() || "";
     const now = new Date();
     const dateCode = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("");
     const reference = `IA-${dateCode}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
@@ -122,7 +126,21 @@ Balance downpayment: ${$("otrBalance").textContent}
     doc.setTextColor(20, 20, 20);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
-    doc.text(doc.splitTextToSize(model, 178), 16, 66);
+    doc.text(doc.splitTextToSize(model, 92), 16, 66);
+    doc.setTextColor(110, 110, 110);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text("PREPARED FOR", 116, 58);
+    doc.setTextColor(20, 20, 20);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(doc.splitTextToSize(customerName, 78), 116, 66);
+    if (customerPhone) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.text(customerPhone, 116, 72);
+    }
 
     let y = 82;
     doc.setFillColor(245, 245, 245);

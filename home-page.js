@@ -16,12 +16,14 @@
 
   function fallback() {
     grid.innerHTML = `<div class="featured-stock-fallback">
-      <span>READY STOCK</span>
-      <h3>Featured stock sedang dikemaskini.</h3>
-      <p>Untuk senarai ready stock terkini, WhatsApp team Izuwan dan kami akan semak availability untuk anda.</p>
+      <span>PERSONAL STOCK ASSISTANCE</span>
+      <h3>Tak jumpa unit yang anda cari?</h3>
+      <p>Beritahu model, bajet dan warna pilihan. Team Izuwan akan semak ready stock serta pilihan sourcing yang sesuai.</p>
       <a href="${window.IASBSite.whatsappUrl("[Homepage Featured Stock] Hai, saya ingin semak ready stock featured Izuwan Automobile.")}" target="_blank" rel="noopener">WhatsApp Izuwan →</a>
     </div>`;
   }
+
+  grid.setAttribute("aria-live", "polite");
 
   function render(cars) {
     const list = cars || [];

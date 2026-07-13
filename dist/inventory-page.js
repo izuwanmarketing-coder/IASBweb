@@ -15,7 +15,16 @@
 
   const money = value => `RM ${Math.round(Number(value) || 0).toLocaleString("en-MY")}`;
   const mileage = value => Number(value) > 0 ? `${Math.round(Number(value)).toLocaleString("en-MY")} km` : "Upon request";
-  const monthlyEstimate = value => Math.round(((Number(value) || 0) * (1 + (0.032 * 9))) / (9 * 12));
+  const monthlyEstimate = value => Math.round((((Number(value) || 0) * 0.9) * (1 + (0.032 * 9))) / (9 * 12));
+  const statusLabels = {
+    AVAILABLE: "Ready Stock",
+    INCOMING: "Akan Tiba",
+    "PORT KLANG": "Di Pelabuhan",
+    "DONE PAID DUTI": "Sedia Diproses",
+    RESERVED: "Ditempah",
+    SOLD: "Terjual"
+  };
+  const statusLabel = value => statusLabels[String(value || "AVAILABLE").toUpperCase()] || String(value || "Ready Stock");
   const keyFor = car => `${car.brand}|${car.model}|${car.variant}`.toLowerCase();
   const fallbackPhotoMap = new Map(
     fallbackCars.map((car, index) => [keyFor(car), window.carPhotoData?.[index] || null])
@@ -100,7 +109,7 @@
         ${badges.length ? `<div class="stock-badges">${badges.map(badge => `<span>${safeText(badge)}</span>`).join("")}</div>` : ""}
         <div class="inventory-meta">
           <span>${safeText(car.brand)} / ${safeText(car.type || "Recond")}</span>
-          <b class="stock-status">${safeText(car.status || "AVAILABLE")}</b>
+          <b class="stock-status">${safeText(statusLabel(car.status))}</b>
         </div>
         <h2>${safeText(car.brand)} ${safeText(car.model)}</h2>
         <p>${safeText(detailLine)}</p>
@@ -112,10 +121,10 @@
         </div>
         <div class="inventory-price">
           <strong>${money(car.price)}</strong>
-          <span>${money(monthlyEstimate(car.price))}/month est. · ${Number(car.units) || 1} unit</span>
+          <span>${money(monthlyEstimate(car.price))}/bulan anggaran · ${Number(car.units) || 1} unit</span>
         </div>
         <div class="inventory-actions">
-          <a href="${detailHref}" data-lead-action="inventory_details" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(`${car.brand} ${car.model}`)}">Details</a>
+          <a href="${detailHref}" data-lead-action="inventory_details" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(`${car.brand} ${car.model}`)}">Lihat butiran</a>
           <a href="calculator.html?price=${Number(car.price) || 0}&car=${encodedLabel}" data-lead-action="inventory_calculator" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(`${car.brand} ${car.model}`)}">Kira ansuran</a>
           <a class="outline" data-stock-enquiry data-lead-action="inventory_whatsapp" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(`${car.brand} ${car.model}`)}" href="#">Tanya stok</a>
         </div>
@@ -144,7 +153,7 @@
         .join(" ").toLowerCase().includes(query)));
 
     renderStats(filtered);
-    $("inventorySummary").textContent = `${filtered.length} pilihan ditemui`;
+    $("inventorySummary").textContent = `${filtered.length} pilihan ditemui. Anggaran ansuran menggunakan 90% pinjaman, 9 tahun dan kadar 3.2% setahun.`;
     const displayed = filtered.slice(0, visibleLimit);
     $("carGrid").innerHTML = filtered.length ? displayed.map(renderCard).join("") + (filtered.length > displayed.length
       ? `<button class="inventory-load-more" type="button" data-load-more>Tunjuk lagi ${Math.min(12, filtered.length - displayed.length)} unit</button>`
@@ -161,7 +170,7 @@
     const car = cars.find(item => keyFor(item) === carKey);
     const gallery = car ? photoFor(car) : null;
     if (!car || !gallery?.photos?.length) return;
-    activeGallery = { car, gallery };
+    activeGallery = { car, gallery, trigger: document.activeElement };
     activePhoto = 0;
     updateGallery();
     $("photoDialog").showModal();
@@ -172,16 +181,21 @@
     const photos = activeGallery.gallery.photos;
     activePhoto = (activePhoto + delta + photos.length) % photos.length;
     $("photoLarge").src = photos[activePhoto].src;
-    $("photoLarge").alt = `${activeGallery.car.brand} ${activeGallery.car.model}`;
+    $("photoLarge").alt = `${activeGallery.car.brand} ${activeGallery.car.model}, gambar ${activePhoto + 1} daripada ${photos.length}`;
     $("photoTitle").textContent = `${activeGallery.car.brand} ${activeGallery.car.model}`;
     $("photoCounter").textContent = `${activePhoto + 1} / ${photos.length}`;
+    $("photoPrev").setAttribute("aria-label", `Gambar sebelumnya. Gambar ${activePhoto + 1} daripada ${photos.length}`);
+    $("photoNext").setAttribute("aria-label", `Gambar seterusnya. Gambar ${activePhoto + 1} daripada ${photos.length}`);
     $("photoDriveLink").href = activeGallery.gallery.folder;
   }
 
   document.querySelectorAll("[data-type]").forEach(button => button.addEventListener("click", () => {
     visibleLimit = 12;
     activeType = button.dataset.type;
-    document.querySelectorAll("[data-type]").forEach(item => item.classList.toggle("active", item === button));
+    document.querySelectorAll("[data-type]").forEach(item => {
+      item.classList.toggle("active", item === button);
+      item.setAttribute("aria-pressed", String(item === button));
+    });
     render();
   }));
   $("stockSearch").addEventListener("input", event => { visibleLimit = 12; searchTerm = event.target.value; render(); });
@@ -216,6 +230,11 @@
   $("photoDialog").addEventListener("click", event => {
     if (event.target === $("photoDialog")) $("photoDialog").close();
   });
+  $("photoDialog").addEventListener("close", () => activeGallery?.trigger?.focus());
+  $("photoDialog").addEventListener("keydown", event => {
+    if (event.key === "ArrowLeft") updateGallery(-1);
+    if (event.key === "ArrowRight") updateGallery(1);
+  });
 
   function initialize(nextCars, source) {
     cars = (nextCars || []).map((car, index) => ({ ...car, _sourceIndex: car._sourceIndex ?? index }));
@@ -237,4 +256,5 @@
   if (!window.IASBData?.configured) {
     window.setTimeout(() => initialize(fallbackCars, "built-in"), 180);
   }
+  document.querySelectorAll("[data-type]").forEach(item => item.setAttribute("aria-pressed", String(item.classList.contains("active"))));
 })();

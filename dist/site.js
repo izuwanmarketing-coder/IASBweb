@@ -36,6 +36,19 @@
 
   applyTheme(localStorage.getItem("iasb-theme") || "dark");
 
+  const mainNav = $("siteNav");
+  if (mainNav) {
+    mainNav.setAttribute("aria-label", "Navigasi utama");
+    mainNav.innerHTML = `
+      <a href="inventory.html">Inventory</a>
+      <a href="find-car.html">Find My Car</a>
+      <a href="select-programme.html">Select Programme</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+      <a class="tool-nav-link" href="calculator.html">Tools</a>`;
+  }
+  $("menuButton")?.setAttribute("aria-controls", "siteNav");
+
   $("themeButton")?.addEventListener("click", () => {
     const theme = document.body.classList.contains("light") ? "dark" : "light";
     localStorage.setItem("iasb-theme", theme);
@@ -52,7 +65,17 @@
     const current = location.pathname.split("/").pop() || "index.html";
     const target = link.getAttribute("href").split("#")[0] || "index.html";
     link.classList.toggle("active", current === target);
-    link.addEventListener("click", () => $("siteNav")?.classList.remove("open"));
+    link.addEventListener("click", () => {
+      $("siteNav")?.classList.remove("open");
+      $("menuButton")?.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape" || !$("siteNav")?.classList.contains("open")) return;
+    $("siteNav").classList.remove("open");
+    $("menuButton")?.setAttribute("aria-expanded", "false");
+    $("menuButton")?.focus();
   });
 
   const progress = document.createElement("div");
@@ -154,9 +177,10 @@
       });
       document.querySelectorAll("[data-main-whatsapp]").forEach(link => {
         const programmePage = location.pathname.includes("select-programme");
-        link.href = this.whatsappUrl(programmePage
+        const customMessage = link.dataset.whatsappMessage;
+        link.href = this.whatsappUrl(customMessage || (programmePage
           ? "Hai, saya berminat dengan Izuwan Select Programme dan ingin source kereta dari Jepun."
-          : "Hai, saya ingin bertanya tentang kereta di Izuwan Automobile.");
+          : "Hai, saya ingin bertanya tentang kereta di Izuwan Automobile."));
       });
       document.querySelectorAll("[data-floating-whatsapp]").forEach(link => {
         link.href = this.whatsappUrl("Hai, saya ingin bertanya tentang kereta di Izuwan Automobile.");
