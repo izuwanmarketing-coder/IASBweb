@@ -441,6 +441,113 @@ body.light {
   footer { padding-left: 14px; padding-right: 14px; }
 }
 
+/* Homepage recovery: keep the opening view balanced and production-ready. */
+.home-main .home-hero {
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(460px, .92fr);
+  align-items: center;
+  gap: clamp(42px, 5vw, 76px);
+  padding: clamp(48px, 5vw, 76px) 0 clamp(72px, 7vw, 104px);
+}
+
+.home-main .home-hero-copy {
+  max-width: 650px;
+}
+
+.home-main .home-hero h1 {
+  max-width: 10ch;
+  margin: 22px 0 26px;
+  font-size: clamp(58px, 5.2vw, 82px);
+  line-height: .91;
+  letter-spacing: -.07em;
+}
+
+.home-main .home-hero h1 > span,
+.home-main .home-hero h1 > em {
+  white-space: normal;
+}
+
+.home-main .home-hero-copy > p {
+  max-width: 54ch;
+  font-size: clamp(15px, 1.15vw, 18px);
+  line-height: 1.7;
+}
+
+.home-main .home-hero-visual {
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 4 / 4.25;
+  margin: 0;
+  border: 1px solid var(--line);
+  box-shadow: 0 28px 80px rgba(0,0,0,.34);
+}
+
+.home-main .home-hero-visual img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-position: 53% center;
+}
+
+.home-main .home-hero-visual::before {
+  background: linear-gradient(90deg, rgba(5,5,5,.18), transparent 42%);
+}
+
+.home-main .home-hero-visual::after {
+  background: linear-gradient(180deg, transparent 48%, rgba(4,4,4,.92));
+}
+
+.home-main .hero-index { display: none; }
+
+body.has-live-event .home-main .home-hero {
+  padding-top: clamp(42px, 4.5vw, 66px);
+}
+
+@media (max-width: 1080px) {
+  .home-main .home-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(420px, .9fr);
+    gap: 42px;
+  }
+
+  .home-main .home-hero h1 { font-size: clamp(54px, 5.8vw, 68px); }
+}
+
+@media (max-width: 900px) {
+  .home-main .home-hero {
+    grid-template-columns: 1fr;
+    padding-top: 54px;
+  }
+
+  .home-main .home-hero-copy { max-width: 720px; }
+  .home-main .home-hero h1 { max-width: 11ch; font-size: clamp(56px, 10vw, 78px); }
+  .home-main .home-hero-visual { max-height: 620px; aspect-ratio: 16 / 11; }
+  .home-main .home-hero-visual img { object-position: 52% 58%; }
+}
+
+@media (max-width: 620px) {
+  .home-main .home-hero {
+    gap: 38px;
+    padding: 42px 0 66px;
+  }
+
+  .home-main .home-hero h1 {
+    margin-top: 18px;
+    font-size: clamp(48px, 14vw, 62px);
+    line-height: .94;
+  }
+
+  .home-main .hero-actions { margin-top: 28px; }
+  .home-main .home-hero-visual {
+    width: calc(100% + 36px);
+    max-height: none;
+    margin-inline: -18px;
+    aspect-ratio: 4 / 5;
+    border-inline: 0;
+  }
+
+  .home-main .home-hero-visual img { object-position: 52% center; }
+}
+
 /* Multi-page company website */
 .page-topbar {
   position: relative;
