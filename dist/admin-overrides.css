@@ -728,6 +728,62 @@ summary:focus-visible {
 .table-wrap thead { position: sticky; z-index: 2; top: 0; background: #151719; }
 .table-wrap tbody tr:hover { background: rgba(255,255,255,.025); }
 
+.pricelist-toggle {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.025);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+.pricelist-toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.pricelist-toggle span { color: inherit; font-size: inherit; letter-spacing: 0; }
+
+.status-chip {
+  --status-color: #9da3aa;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-color: color-mix(in srgb, var(--status-color) 38%, transparent);
+  background: color-mix(in srgb, var(--status-color) 11%, transparent);
+  color: var(--status-color);
+  font-weight: 900;
+  letter-spacing: .06em;
+}
+.status-chip i {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent), 0 0 12px currentColor;
+}
+.status-available { --status-color: #52d88a; }
+.status-incoming { --status-color: #62b5ff; }
+.status-port-klang { --status-color: #b98cff; }
+.status-done-paid-duti { --status-color: #f0b849; }
+.status-booked,
+.status-reserved { --status-color: #ff8c42; }
+.status-sold { --status-color: #ff5d66; }
+.status-hidden,
+.status-inactive { --status-color: #8b9098; }
+.status-active { --status-color: #52d88a; }
+.status-live-now { --status-color: #52d88a; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .status-available i,
+  .status-incoming i,
+  .status-live-now i { animation: status-pulse 2.1s ease-out infinite; }
+}
+@keyframes status-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent), 0 0 8px currentColor; }
+  50% { box-shadow: 0 0 0 6px transparent, 0 0 16px currentColor; }
+}
+
 @media (max-width: 850px) {
   .admin-health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .header-actions { width: 100%; flex-wrap: wrap; }

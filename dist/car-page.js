@@ -23,6 +23,7 @@
   const displayPrice = value => Number(value) >= 10000 ? money(value) : "Harga perlu disahkan";
   const mileage = value => Number(value) > 0 ? `${Math.round(Number(value)).toLocaleString("en-MY")} km` : "Upon request";
   const statusLabel = value => window.IASBSite?.statusLabel(value) || String(value || "Ready Stock");
+  const statusClass = value => `status-${String(value || "available").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
 
   function formatUpdated(value) {
     if (!value) return "";
@@ -142,7 +143,7 @@
       <div class="similar-grid">${similar.map(item => {
         const href = item.id ? `car.html?id=${encodeURIComponent(item.id)}` : `car.html?source=${encodeURIComponent(item._sourceIndex ?? "")}`;
         return `<a href="${href}" class="similar-card">
-          <span>${safeText(statusLabel(item.status))}</span>
+          <span class="stock-status ${statusClass(item.status)}"><i aria-hidden="true"></i>${safeText(statusLabel(item.status))}</span>
           <h3>${safeText(item.brand)} ${safeText(item.model)}</h3>
           <p>${safeText([item.year, item.grade, item.variant].filter(Boolean).join(" · ") || item.type || "Recond")}</p>
           <strong>${displayPrice(item.price)}</strong>
@@ -177,7 +178,7 @@
     root.innerHTML = `<section class="car-detail-shell car-detail-v2">
       <div class="car-detail-media">${renderGallery(photos, title)}</div>
       <article class="car-detail-panel">
-        <small>${safeText(statusLabel(car.status))} · ${safeText(car.location || "Izuwan Automobile")}${updated ? ` · Dikemas kini ${safeText(updated)}` : ""}</small>
+        <small class="car-status-line"><span class="stock-status ${statusClass(car.status)}"><i aria-hidden="true"></i>${safeText(statusLabel(car.status))}</span><span>${safeText(car.location || "Izuwan Automobile")}${updated ? ` · Dikemas kini ${safeText(updated)}` : ""}</span></small>
         <h1>${safeText(title)}</h1>
         <p>${safeText(car.description || detailLine)}</p>
         ${renderBadges(car)}

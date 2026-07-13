@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css?v=20260713-1">
-  <link rel="stylesheet" href="admin-overrides.css?v=20260713-1">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="admin-overrides.css?v=20260714-2">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="manifest" href="site.webmanifest">
@@ -120,6 +120,7 @@
                 <option value="insert">Insert as new only</option>
                 <option value="update">Update existing only</option>
               </select>
+              <label class="pricelist-toggle"><input id="excludeIncomingPricelist" type="checkbox" checked><span>Exclude status INCOMING</span></label>
               <button type="button" id="previewPricelistButton">Preview</button>
               <button type="button" class="accent-btn" id="importPricelistButton" disabled>Import / Update</button>
             </div>
@@ -368,7 +369,7 @@
   <script src="config.js?v=20260630-2"></script>
   <script src="data-service.js?v=20260630-2"></script>
   <script src="inventory.js?v=20260630-2"></script>
-  <script src="admin.js?v=20260713-1"></script>
+  <script src="admin.js?v=20260714-2"></script>
 </body>
 </html>
 

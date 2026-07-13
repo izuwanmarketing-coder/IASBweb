@@ -627,6 +627,63 @@ body.has-live-event .home-main .home-hero {
   .home-main .featured-fallback-actions a { width: 100%; }
 }
 
+/* Inventory status language: colour, icon and subtle motion for quick scanning. */
+.stock-status {
+  --status-color: #9da3aa;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: max-content;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--status-color) 38%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--status-color) 11%, transparent);
+  color: var(--status-color);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.stock-status i {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent), 0 0 11px currentColor;
+}
+.stock-status.status-available { --status-color: #52d88a; }
+.stock-status.status-incoming { --status-color: #62b5ff; }
+.stock-status.status-port-klang { --status-color: #b98cff; }
+.stock-status.status-done-paid-duti { --status-color: #f0b849; }
+.stock-status.status-booked,
+.stock-status.status-reserved { --status-color: #ff8c42; }
+.stock-status.status-sold { --status-color: #ff5d66; }
+.stock-status.status-hidden { --status-color: #8b9098; }
+.featured-stock-copy small {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.featured-stock-copy small > span:last-child { color: var(--muted); }
+.car-status-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.similar-card > .stock-status { margin-bottom: 14px; }
+@media (prefers-reduced-motion: no-preference) {
+  .stock-status.status-available i,
+  .stock-status.status-incoming i { animation: public-status-pulse 2.1s ease-out infinite; }
+}
+@keyframes public-status-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent), 0 0 7px currentColor; }
+  50% { box-shadow: 0 0 0 6px transparent, 0 0 15px currentColor; }
+}
+
 /* Multi-page company website */
 .page-topbar {
   position: relative;

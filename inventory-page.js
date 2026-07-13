@@ -23,6 +23,7 @@
   const monthlyEstimate = value => window.IASBSite?.monthlyEstimate(value)
     ?? Math.round((((Number(value) || 0) * 0.9) * (1 + (0.032 * 9))) / (9 * 12));
   const statusLabel = value => window.IASBSite?.statusLabel(value) || String(value || "Ready Stock");
+  const statusClass = value => `status-${String(value || "available").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
   const fallbackPhotoMap = new Map(
     fallbackCars.map((car, index) => [index, window.carPhotoData?.[index] || null])
   );
@@ -141,7 +142,7 @@
         ${badges.length ? `<div class="stock-badges">${badges.map(badge => `<span>${safeText(badge)}</span>`).join("")}</div>` : ""}
         <div class="inventory-meta">
           <span>${safeText(car.brand)} / ${safeText(car.type || "Recond")}</span>
-          <b class="stock-status">${safeText(statusLabel(car.status))}</b>
+          <b class="stock-status ${statusClass(car.status)}"><i aria-hidden="true"></i>${safeText(statusLabel(car.status))}</b>
         </div>
         <h2><a class="inventory-title-link" href="${detailHref}">${safeText(car.brand)} ${safeText(car.model)}</a></h2>
         <p>${safeText(detailLine)}</p>

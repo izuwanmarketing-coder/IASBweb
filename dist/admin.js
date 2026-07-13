@@ -54,6 +54,7 @@ const adminStatusLabels = {
   HIDDEN: "Disembunyikan"
 };
 const adminStatusLabel = value => adminStatusLabels[String(value || "").toUpperCase()] || String(value || "Tidak diketahui");
+const adminStatusClass = value => `status-${String(value || "unknown").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
 
 function money(value) {
   return `RM ${Number(value || 0).toLocaleString("en-MY")}`;
@@ -344,7 +345,8 @@ function inventoryImportKey(car) {
     car.model,
     car.year || "",
     car.grade || "",
-    car.variant || ""
+    car.variant || "",
+    car.marketing_label || ""
   ].map(value => String(value || "").trim().toLowerCase()).join("|");
 }
 
@@ -424,47 +426,120 @@ async function extractPdfLines(file) {
 }
 
 function parsePdfPricelistLines(lines) {
-  const knownBrands = ["Toyota", "Lexus", "Honda", "Nissan", "Mazda", "Mercedes-Benz", "Mercedes", "BMW", "Audi", "Volkswagen", "Porsche", "Subaru", "Mitsubishi", "Suzuki"];
-  const statusWords = ["AVAILABLE", "INCOMING", "DONE PAID DUTI", "PORT KLANG", "SOLD", "BOOKED"];
+  const modelRules = [
+    [/LAND CRUISER PRADO/i, "Toyota", "Land Cruiser Prado", "SUV"],
+    [/LAND CRUISER 250/i, "Toyota", "Land Cruiser 250", "SUV"],
+    [/\b250 (?:VX|ZX)/i, "Toyota", "Land Cruiser 250", "SUV"],
+    [/\bVELLFIRE\b/i, "Toyota", "Vellfire", "MPV"],
+    [/\bALPHARD\b/i, "Toyota", "Alphard", "MPV"],
+    [/\bSTEPWAGON\b/i, "Honda", "Stepwgn", "MPV"],
+    [/\bHARRIER\b/i, "Toyota", "Harrier", "SUV"],
+    [/\bRX300\b/i, "Lexus", "RX300", "SUV"],
+    [/\bNOAH\b/i, "Toyota", "Noah", "MPV"],
+    [/\bVOXY\b/i, "Toyota", "Voxy", "MPV"],
+    [/\bCLA180\b/i, "Mercedes-Benz", "CLA180", "Sedan"],
+    [/\bB180\b/i, "Mercedes-Benz", "B180", "Hatchback"],
+    [/\bA180\b/i, "Mercedes-Benz", "A180", "Sedan"],
+    [/\bA250\b/i, "Mercedes-Benz", "A250", "Sedan"],
+    [/\b(?:AMG )?GLA35\b/i, "Mercedes-Benz", "GLA35 AMG", "SUV"],
+    [/\bCOPEN\b/i, "Daihatsu", "Copen", "Sports"],
+    [/\bTAFT\b/i, "Daihatsu", "Taft", "SUV"],
+    [/\bCROWN\b/i, "Toyota", "Crown", "Sedan"],
+    [/\bTYPE R\b/i, "Honda", "Civic Type R", "Sports"],
+    [/\bCIVIC HATCHBACK\b/i, "Honda", "Civic Hatchback", "Hatchback"],
+    [/\bFL1 EX\b/i, "Honda", "Civic FL1", "Sedan"],
+    [/\bN ?BOX\b/i, "Honda", "N-Box", "Mini MPV"],
+    [/\bGR 86\b/i, "Toyota", "GR86", "Sports"]
+  ];
   const records = [];
   const errors = [];
-  lines.forEach((line, index) => {
-    const clean = line.replace(/\s+/g, " ").trim();
-    const lower = clean.toLowerCase();
-    if (!clean || /price\s*list|pricelist|brand|model|total|page\s+\d|izuwan|automobile/i.test(clean)) return;
-    const brand = knownBrands.find(item => lower.includes(item.toLowerCase()));
-    const priceMatch = clean.match(/(?:rm\s*)?(\d{2,3}(?:[,\s]\d{3})+(?:\.\d{1,2})?|\d{5,7})(?!\s*(?:km|cc))/i);
-    if (!brand || !priceMatch) return;
+  const blocks = [];
+  let current = null;
+  let skipIncoming = false;
+  const recent = [];
 
-    const price = parseMoney(priceMatch[1]);
-    const yearMatch = clean.match(/\b(20[0-3]\d|19[8-9]\d)\b/);
-    const mileageMatch = clean.match(/\b(\d{1,3}(?:[,\s]\d{3})+|\d{4,6})\s*(?:km|kms|mileage)\b/i);
-    const status = statusWords.find(word => lower.includes(word.toLowerCase())) || "AVAILABLE";
-    const afterBrand = clean.slice(clean.toLowerCase().indexOf(brand.toLowerCase()) + brand.length).trim();
-    const stopAt = [yearMatch?.index, priceMatch.index, mileageMatch?.index].filter(value => value !== undefined && value >= 0).sort((a, b) => a - b)[0];
-    const modelPart = (stopAt !== undefined ? clean.slice(clean.toLowerCase().indexOf(brand.toLowerCase()) + brand.length, stopAt) : afterBrand)
-      .replace(/\b\d{1,2}\.\d\b/g, "")
-      .replace(/\b\d{3,5}\s*cc\b/ig, "")
-      .replace(/\b(available|incoming|sold|booked|done paid duti|port klang)\b/ig, "")
-      .trim();
-    const pieces = modelPart.split(/\s{2,}| - | \| /).map(x => x.trim()).filter(Boolean);
-    const model = pieces[0] || afterBrand.split(" ").slice(0, 2).join(" ");
-    if (!model) {
-      errors.push(`PDF line ${index + 1}: model tak dapat detect`);
+  lines.forEach((line, index) => {
+    const clean = String(line || "").replace(/\s+/g, " ").trim();
+    if (!clean) return;
+    if (/^INCOMING STOCK$/i.test(clean)) {
+      skipIncoming = true;
+      current = null;
       return;
     }
+    if (/PRICELIST WMSB/i.test(clean)) {
+      skipIncoming = false;
+      current = null;
+      return;
+    }
+    if (skipIncoming) return;
+
+    const start = clean.match(/^(\d+)\s+(WG6|WU6|WV6)(?:\s+\(([^)]+)\))?\s+(.+)$/i);
+    if (start) {
+      current = {
+        lineNumber: index + 1,
+        stockNumber: start[1],
+        yard: start[2].toUpperCase(),
+        anchor: clean,
+        prefix: recent.slice(-2),
+        tail: []
+      };
+      blocks.push(current);
+    } else if (current && !/PRICELIST IASB|SELLING PRICE|NO BONDED LOT/i.test(clean)) {
+      current.tail.push(clean);
+    }
+    recent.push(clean);
+    if (recent.length > 3) recent.shift();
+  });
+
+  blocks.forEach(block => {
+    const combined = [block.anchor, ...block.tail.slice(0, 5)].join(" ");
+    const modelSource = [...block.prefix, block.anchor].join(" ");
+    const rule = modelRules.find(([pattern]) => pattern.test(modelSource));
+    if (!rule) {
+      errors.push(`PDF line ${block.lineNumber}: model tak dapat detect`);
+      return;
+    }
+    const [pattern, brand, model, type] = rule;
+    const modelMatch = block.anchor.match(pattern);
+    const modelStart = modelMatch?.index ?? -1;
+    let variant = modelStart >= 0 ? block.anchor.slice(modelStart + (modelMatch?.[0]?.length || 0))
+      .split(/\s+\((?:3BA|5BA|6BA|8BA|3DA|4BA|5AA|DBA)-/i)[0]
+      .replace(/\b(?:AVAILABLE|SOLD|BOOKED|INCOMING)\b.*$/i, "")
+      .replace(/^\s*[-–|]+|\s+/g, " ")
+      .trim() : "";
+    if (variant.length > 70) variant = variant.slice(0, 70).trim();
+
+    const yearMatch = block.anchor.match(/\b(20[0-3]\d|19[8-9]\d)\b/);
+    const priceMatch = combined.match(/RM\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const mileageMatch = combined.match(/(?:MILEAGE\s*)?(\d{1,3}(?:,\d{3})+|\d{1,3})\s*(K|KM)\b/i);
+    const statusSource = [...block.prefix, block.anchor].join(" ");
+    const status = /SOLD/i.test(block.anchor) ? "SOLD"
+      : /BOOKED/i.test(block.anchor) ? "BOOKED"
+      : /DONE\s+PAID(?:\s+DUTI)?/i.test(statusSource) ? "DONE PAID DUTI"
+      : /PORT\s+KLANG/i.test(statusSource) ? "PORT KLANG"
+      : "AVAILABLE";
+    const chassisPattern = /\b(?:AGH|TAHA|MZRA|RP3|MXUA|AGL|FK7|FL5|FL1|W1K|W1N|LA|GDJ|TRJ|ZRR|JF3)[A-Z0-9-]*\s*\d{4,7}\b/i;
+    const chassisMatch = combined.match(chassisPattern);
+    const reference = chassisMatch
+      ? chassisMatch[0].replace(/\s+/g, "").toUpperCase()
+      : `${block.yard}-${block.stockNumber}`;
+    const location = block.yard === "WG6" ? "Gombak"
+      : block.yard === "WV6" ? "Wanmo"
+      : "HQ Taman Wahyu";
+
     records.push({
-      brand: brand === "Mercedes" ? "Mercedes-Benz" : brand,
+      brand,
       model,
       year: yearMatch ? Number(yearMatch[1]) : null,
-      grade: pieces[1] || "",
-      variant: pieces[2] || "",
-      type: "Other",
-      price,
-      mileage: mileageMatch ? parseInteger(mileageMatch[1]) : null,
+      grade: "",
+      variant,
+      type,
+      price: priceMatch ? parseMoney(priceMatch[1]) : 0,
+      mileage: mileageMatch ? parseInteger(mileageMatch[1]) * (mileageMatch[2].toUpperCase() === "K" ? 1000 : 1) : null,
       status,
-      location: "HQ Taman Wahyu",
+      location,
       units: 1,
+      marketing_label: reference,
       is_active: true,
       updated_at: new Date().toISOString()
     });
@@ -582,7 +657,7 @@ function renderInventory() {
         <small>${safeText([car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "-")}</small>
       </td>
       <td>${safeText(car.location)}</td>
-      <td><span class="status-chip">${safeText(adminStatusLabel(car.is_active ? car.status : "HIDDEN"))}</span></td>
+      <td><span class="status-chip ${adminStatusClass(car.is_active ? car.status : "HIDDEN")}"><i aria-hidden="true"></i>${safeText(adminStatusLabel(car.is_active ? car.status : "HIDDEN"))}</span></td>
       <td>${money(car.price)}</td>
       <td>${km(car.mileage)}</td>
       <td>${Number(car.units || 1)}</td>
@@ -834,7 +909,7 @@ renderInventory = function renderInventoryEnhanced() {
         <small>${getCarGallery(car).length ? `${getCarGallery(car).length} photos attached` : "No photos yet"}</small>
       </td>
       <td>${safeText(car.location)}</td>
-      <td><span class="status-chip">${safeText(car.is_active ? car.status : "HIDDEN")}</span></td>
+      <td><span class="status-chip ${adminStatusClass(car.is_active ? car.status : "HIDDEN")}"><i aria-hidden="true"></i>${safeText(adminStatusLabel(car.is_active ? car.status : "HIDDEN"))}</span></td>
       <td>${money(car.price)}</td>
       <td>${km(car.mileage)}</td>
       <td>${Number(car.units || 1)}</td>
@@ -986,9 +1061,14 @@ $("previewPricelistButton").addEventListener("click", async () => {
   $("previewPricelistButton").textContent = "Reading...";
   try {
     const { records, errors } = await parsePricelistFile(file);
-    parsedPricelistRows = records;
-    renderPricelistPreview(errors);
-    toast(`${records.length} row pricelist dibaca`);
+    const excludeIncoming = $("excludeIncomingPricelist")?.checked;
+    const incomingCount = records.filter(record => String(record.status || "").toUpperCase() === "INCOMING").length;
+    parsedPricelistRows = excludeIncoming
+      ? records.filter(record => String(record.status || "").toUpperCase() !== "INCOMING")
+      : records;
+    const importNotes = incomingCount && excludeIncoming ? [...errors, `${incomingCount} incoming row dikecualikan`] : errors;
+    renderPricelistPreview(importNotes);
+    toast(`${parsedPricelistRows.length} row pricelist sedia untuk import`);
   } catch (error) {
     parsedPricelistRows = [];
     renderPricelistPreview([error.message]);

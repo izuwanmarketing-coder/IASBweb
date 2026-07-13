@@ -6,6 +6,7 @@
   const mileage = value => Number(value) > 0 ? `${Math.round(Number(value)).toLocaleString("en-MY")} km` : "Mileage upon request";
   const displayPrice = value => Number(value) >= 10000 ? money(value) : "Harga perlu disahkan";
   const statusLabel = value => window.IASBSite?.statusLabel(value) || String(value || "Ready Stock");
+  const statusClass = value => `status-${String(value || "available").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
 
   function safeText(value) {
     return String(value ?? "")
@@ -54,7 +55,7 @@
           ? `<img loading="lazy" src="${safeText(car.image_url)}" alt="${safeText(`${car.brand} ${car.model}`)}">`
           : `<span>${safeText(car.brand || "IA")}</span>`}</div>
         <div class="featured-stock-copy">
-          <small>${safeText(statusLabel(car.status))} · ${safeText(car.location || "Izuwan Automobile")}</small>
+          <small><span class="stock-status ${statusClass(car.status)}"><i aria-hidden="true"></i>${safeText(statusLabel(car.status))}</span><span>${safeText(car.location || "Izuwan Automobile")}</span></small>
           <h3>${safeText(car.brand)} ${safeText(car.model)}</h3>
           <p>${safeText(detailLine)}</p>
           <div class="featured-stock-specs">
