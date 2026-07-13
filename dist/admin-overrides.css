@@ -586,3 +586,197 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+/* Admin product-quality pass. */
+[hidden] { display: none !important; }
+
+.admin-nav-group {
+  display: block;
+  margin: 18px 14px 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+
+.admin-nav-group:first-child { margin-top: 2px; }
+
+.health-card { margin-top: 20px; }
+.admin-health-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+.health-item {
+  min-height: 145px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.025);
+  color: var(--text);
+  text-align: left;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.health-item:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.25); }
+.health-item strong,
+.health-item span,
+.health-item small { display: block; }
+.health-item strong { font: 800 30px "Manrope"; }
+.health-item span { margin-top: 12px; font-size: 14px; font-weight: 800; }
+.health-item small { margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.health-item.warning { border-color: rgba(255,190,73,.36); }
+.health-item.warning strong { color: #ffbe49; }
+.health-item.danger { border-color: rgba(226,27,35,.45); }
+.health-item.danger strong { color: var(--danger); }
+.health-item.good strong { color: #55d68b; }
+.health-item.info strong { color: var(--accent); }
+
+.header-actions { position: relative; }
+.admin-action-menu { position: relative; }
+.admin-action-menu > summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  list-style: none;
+}
+.admin-action-menu > summary::-webkit-details-marker { display: none; }
+.admin-action-menu > div {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  background: #151719;
+  box-shadow: 0 18px 50px rgba(0,0,0,.4);
+}
+.admin-action-menu button {
+  width: 100%;
+  min-height: 42px;
+  display: block;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+.admin-action-menu button:hover { background: rgba(255,255,255,.06); }
+.admin-action-menu button.danger { color: var(--danger); }
+.quiet-btn {
+  min-height: 38px;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  padding: 0 12px;
+}
+
+.bulk-toolbar:not(.has-selection) { display: none; }
+.bulk-toolbar.has-selection {
+  position: sticky;
+  z-index: 16;
+  top: 10px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.3);
+}
+
+.confirm-dialog {
+  width: min(480px, calc(100% - 28px));
+  padding: 0;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+}
+.confirm-dialog::backdrop { background: rgba(0,0,0,.78); backdrop-filter: blur(4px); }
+.confirm-card { padding: 28px; background: #151719; }
+.confirm-card > span { color: var(--danger); font-size: 11px; font-weight: 900; letter-spacing: .16em; }
+.confirm-card h2 { margin: 9px 0 8px; font: 800 25px "Manrope"; }
+.confirm-card p { color: var(--muted); font-size: 14px; line-height: 1.65; }
+.danger-confirm { border: 0 !important; background: var(--danger) !important; color: #fff !important; font-weight: 900; }
+
+.admin-topbar span,
+.card-title span,
+.pricelist-importer span,
+.inventory-admin-hero > div > span,
+.lead-summary span,
+th,
+.status-chip,
+.mini-badge { font-size: 11px; line-height: 1.4; }
+.stats-grid span,
+.admin-help,
+.table-main small,
+.pricelist-importer p { font-size: 13px; line-height: 1.55; }
+td, .row-actions button { font-size: 13px; }
+.row-actions button { min-height: 38px; padding: 7px 11px; }
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 3px solid rgba(226,27,35,.5);
+  outline-offset: 3px;
+}
+
+.table-wrap { border: 1px solid var(--line); }
+.table-wrap thead { position: sticky; z-index: 2; top: 0; background: #151719; }
+.table-wrap tbody tr:hover { background: rgba(255,255,255,.025); }
+
+@media (max-width: 850px) {
+  .admin-health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .header-actions { width: 100%; flex-wrap: wrap; }
+  .header-actions > button { flex: 1; }
+}
+
+@media (max-width: 520px) {
+  .admin-health-grid { grid-template-columns: 1fr; }
+  .health-item { min-height: 120px; }
+  .admin-action-menu { width: 100%; }
+  .admin-action-menu > summary { justify-content: center; }
+  .admin-action-menu > div { left: 0; right: auto; width: 100%; }
+  .admin-card { padding: 18px 14px; }
+  .stats-grid article { padding: 17px; }
+  .stats-grid strong { font-size: 28px; }
+  .table-wrap { margin-left: -14px; margin-right: -14px; border-left: 0; border-right: 0; }
+  th, td { padding: 12px 10px; }
+}
+
+@media (max-width: 700px) {
+  .table-wrap { overflow: visible; }
+  .table-wrap table,
+  .table-wrap tbody,
+  .table-wrap tr,
+  .table-wrap td { display: block; width: 100%; }
+  .table-wrap thead { display: none; }
+  .table-wrap table { min-width: 0; white-space: normal; }
+  .table-wrap tbody tr { padding: 10px 12px; border-bottom: 8px solid var(--bg); }
+  .table-wrap tbody td {
+    min-height: 42px;
+    display: grid;
+    grid-template-columns: minmax(92px, .42fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .table-wrap tbody td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .table-wrap tbody td[data-label=""] { display: block; min-height: 32px; }
+  .table-wrap tbody td[data-label=""]::before { display: none; }
+  .table-wrap .table-main { max-width: none; }
+  .table-wrap .row-actions { justify-content: flex-start; flex-wrap: wrap; }
+  .table-wrap td[colspan] { display: block; padding: 28px 10px; }
+  .table-wrap td[colspan]::before { display: none; }
+}

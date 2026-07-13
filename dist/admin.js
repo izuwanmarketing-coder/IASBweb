@@ -18,6 +18,43 @@ function toast(message) {
   setTimeout(() => $("adminToast").classList.remove("show"), 2200);
 }
 
+function confirmAction(message, title = "Sahkan tindakan", confirmLabel = "Teruskan") {
+  return new Promise(resolve => {
+    const dialog = $("confirmDialog");
+    $("confirmTitle").textContent = title;
+    $("confirmMessage").textContent = message;
+    $("confirmProceed").textContent = confirmLabel;
+    const onCancel = event => {
+      event.preventDefault();
+      finish(false);
+    };
+    const finish = result => {
+      dialog.removeEventListener("cancel", onCancel);
+      dialog.close();
+      $("confirmCancel").onclick = null;
+      $("confirmProceed").onclick = null;
+      resolve(result);
+    };
+    $("confirmCancel").onclick = () => finish(false);
+    $("confirmProceed").onclick = () => finish(true);
+    dialog.addEventListener("cancel", onCancel);
+    dialog.showModal();
+    $("confirmCancel").focus();
+  });
+}
+
+const adminStatusLabels = {
+  AVAILABLE: "Ready Stock",
+  INCOMING: "Akan Tiba",
+  "PORT KLANG": "Di Pelabuhan",
+  "DONE PAID DUTI": "Sedia Diproses",
+  BOOKED: "Ditempah",
+  RESERVED: "Ditempah",
+  SOLD: "Terjual",
+  HIDDEN: "Disembunyikan"
+};
+const adminStatusLabel = value => adminStatusLabels[String(value || "").toUpperCase()] || String(value || "Tidak diketahui");
+
 function money(value) {
   return `RM ${Number(value || 0).toLocaleString("en-MY")}`;
 }
@@ -152,7 +189,7 @@ function renderDashboard() {
     acc[car.status || "UNKNOWN"] = (acc[car.status || "UNKNOWN"] || 0) + Number(car.units || 1);
     return acc;
   }, {})).sort((a, b) => b[1] - a[1]);
-  $("overviewBreakdown").innerHTML = statuses.map(([name, count]) => `<div><span>${safeText(name)}</span><b>${count} unit</b></div>`).join("") || "<p>Belum ada inventory.</p>";
+  $("overviewBreakdown").innerHTML = statuses.map(([name, count]) => `<div><span>${safeText(adminStatusLabel(name))}</span><b>${count} unit</b></div>`).join("") || "<p>Belum ada inventory.</p>";
 
   const liveEvent = eventRows.find(eventIsLive);
   $("eventSummary").innerHTML = liveEvent ? `
@@ -165,6 +202,29 @@ function renderDashboard() {
     <h3>Tiada campaign aktif sekarang.</h3>
     <p>Tambah e-carnival atau promo untuk paparkan banner automatik di website.</p>
   `;
+
+  const staleCutoff = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  const noPhotos = activeCars.filter(car => getCarGallery(car).length === 0).length;
+  const incomplete = activeCars.filter(car => !car.price || !car.location || !car.brand || !car.model).length;
+  const stale = activeCars.filter(car => {
+    const timestamp = Date.parse(car.updated_at || car.created_at || "");
+    return timestamp && timestamp < staleCutoff;
+  }).length;
+  const duplicates = duplicateIdsToRemove().length;
+  const today = new Date().toDateString();
+  const interactionsToday = leadRows.filter(lead => new Date(lead.created_at).toDateString() === today).length;
+  const healthItems = [
+    [noPhotos, "Stok tanpa gambar", "Tambah visual supaya listing lebih meyakinkan.", "inventory", noPhotos ? "warning" : "good"],
+    [incomplete, "Maklumat belum lengkap", "Harga, lokasi, brand atau model masih kosong.", "inventory", incomplete ? "warning" : "good"],
+    [stale, "Tidak dikemas kini 30+ hari", "Semak availability dan status unit lama.", "inventory", stale ? "warning" : "good"],
+    [duplicates, "Duplicate records", "Review rekod berulang sebelum cleanup.", "inventory", duplicates ? "danger" : "good"],
+    [interactionsToday, "Interactions hari ini", "Klik berniat tinggi daripada website.", "leads", "info"],
+    [liveEvent ? 1 : 0, "Campaign live", liveEvent ? liveEvent.title : "Tiada campaign aktif.", "events", liveEvent ? "good" : "info"]
+  ];
+  $("adminHealth").innerHTML = healthItems.map(([count, label, hint, page, tone]) => `
+    <button type="button" class="health-item ${tone}" data-go-page="${page}">
+      <strong>${safeText(count)}</strong><span>${safeText(label)}</span><small>${safeText(hint)}</small>
+    </button>`).join("");
 }
 
 function filteredInventory() {
@@ -500,6 +560,16 @@ function syncInventoryBulkToolbar(visibleRows = filteredInventory()) {
   $("bulkPhotoManagerButton").disabled = selectedTotal !== 1;
   $("selectAllInventory").checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
   $("selectAllInventory").indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
+  $("inventoryBulkToolbar").classList.toggle("has-selection", selectedTotal > 0);
+}
+
+function labelAdminTables() {
+  document.querySelectorAll(".table-wrap table").forEach(table => {
+    const labels = [...table.querySelectorAll("thead th")].map(header => header.textContent.trim());
+    table.querySelectorAll("tbody tr").forEach(row => {
+      [...row.children].forEach((cell, index) => cell.setAttribute("data-label", labels[index] || ""));
+    });
+  });
 }
 
 function renderInventory() {
@@ -512,13 +582,14 @@ function renderInventory() {
         <small>${safeText([car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "-")}</small>
       </td>
       <td>${safeText(car.location)}</td>
-      <td><span class="status-chip">${safeText(car.is_active ? car.status : "HIDDEN")}</span></td>
+      <td><span class="status-chip">${safeText(adminStatusLabel(car.is_active ? car.status : "HIDDEN"))}</span></td>
       <td>${money(car.price)}</td>
       <td>${km(car.mileage)}</td>
       <td>${Number(car.units || 1)}</td>
       <td><div class="row-actions"><button data-edit-car="${car.id}">Edit</button><button class="danger" data-delete-car="${car.id}">Delete</button></div></td>
     </tr>`).join("") || `<tr><td colspan="8">Tiada stok dijumpai.</td></tr>`;
   syncInventoryBulkToolbar(visibleRows);
+  labelAdminTables();
 }
 
 function renderSettings() {
@@ -541,6 +612,7 @@ function renderSalesmen() {
       <td><span class="status-chip">${person.is_active ? "ACTIVE" : "INACTIVE"}</span></td>
       <td><div class="row-actions"><button data-edit-salesman="${person.id}">Edit</button><button class="danger" data-delete-salesman="${person.id}">Delete</button></div></td>
     </tr>`).join("") || `<tr><td colspan="5">Belum ada salesman.</td></tr>`;
+  labelAdminTables();
 }
 
 function renderEvents() {
@@ -552,6 +624,7 @@ function renderEvents() {
       <td><span class="status-chip">${eventStatus(event)}</span></td>
       <td><div class="row-actions"><button data-edit-event="${event.id}">Edit</button><button class="danger" data-delete-event="${event.id}">Delete</button></div></td>
     </tr>`).join("") || `<tr><td colspan="5">Belum ada event. Tambah e-carnival stock clearance di sini.</td></tr>`;
+  labelAdminTables();
 }
 
 function renderDeliveries() {
@@ -563,6 +636,7 @@ function renderDeliveries() {
       <td><span class="status-chip">${item.is_active ? "ACTIVE" : "INACTIVE"}</span></td>
       <td><div class="row-actions"><button data-edit-delivery="${item.id}">Edit</button><button class="danger" data-delete-delivery="${item.id}">Delete</button></div></td>
     </tr>`).join("") || `<tr><td colspan="5">Belum ada delivery. Tambah gambar serahan customer untuk homepage.</td></tr>`;
+  labelAdminTables();
 }
 
 function renderLeads() {
@@ -582,6 +656,7 @@ function renderLeads() {
       <td class="table-main"><b>${safeText(lead.label || lead.car_name || "-")}</b><small>${safeText(lead.car_name || lead.source_url || "-")}</small></td>
       <td>${lead.source_url ? `<a href="${safeText(lead.source_url)}" target="_blank" rel="noopener">Open</a>` : ""}</td>
     </tr>`).join("") || `<tr><td colspan="5">Belum ada lead.</td></tr>`;
+  labelAdminTables();
 }
 
 function formatLeadTime(value) {
@@ -822,17 +897,39 @@ $("logoutButton").addEventListener("click", async () => {
   location.reload();
 });
 
-document.querySelectorAll(".admin-nav").forEach(button => button.addEventListener("click", () => {
-  document.querySelectorAll(".admin-nav").forEach(x => x.classList.toggle("active", x === button));
-  document.querySelectorAll(".admin-page").forEach(x => x.classList.toggle("active", x.dataset.pagePanel === button.dataset.page));
-  $("pageTitle").textContent = button.textContent;
+function openAdminPage(page) {
+  const activeButton = document.querySelector(`.admin-nav[data-page="${page}"]`);
+  document.querySelectorAll(".admin-nav").forEach(button => button.classList.toggle("active", button === activeButton));
+  document.querySelectorAll(".admin-page").forEach(panel => panel.classList.toggle("active", panel.dataset.pagePanel === page));
+  $("pageTitle").textContent = activeButton?.textContent.trim() || "Overview";
   document.querySelector(".admin-sidebar").classList.remove("open");
-}));
+  $("mobileMenu").setAttribute("aria-expanded", "false");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
-$("mobileMenu").addEventListener("click", () => document.querySelector(".admin-sidebar").classList.toggle("open"));
+document.querySelectorAll(".admin-nav").forEach(button => button.addEventListener("click", () => openAdminPage(button.dataset.page)));
+$("adminHealth").addEventListener("click", event => {
+  const target = event.target.closest("[data-go-page]");
+  if (target) openAdminPage(target.dataset.goPage);
+});
+
+$("mobileMenu").addEventListener("click", () => {
+  const sidebar = document.querySelector(".admin-sidebar");
+  const open = sidebar.classList.toggle("open");
+  $("mobileMenu").setAttribute("aria-expanded", String(open));
+});
+$("showPricelistImporter").addEventListener("click", () => {
+  $("pricelistImporter").hidden = false;
+  $("pricelistFile").focus();
+});
+$("closePricelistImporter").addEventListener("click", () => {
+  $("pricelistImporter").hidden = true;
+  $("showPricelistImporter").focus();
+});
 document.querySelectorAll("[data-close-dialog]").forEach(button => button.addEventListener("click", () => {
   $(button.dataset.closeDialog).close();
 }));
+document.querySelectorAll(".close-dialog").forEach(button => button.setAttribute("aria-label", "Tutup dialog"));
 $("adminStockSearch").addEventListener("input", renderInventory);
 $("adminStockStatus").addEventListener("change", renderInventory);
 $("addCarButton").addEventListener("click", () => openCarDialog());
@@ -866,7 +963,7 @@ $("addEventButton").addEventListener("click", () => openEventDialog({ title: "E-
 $("addDeliveryButton").addEventListener("click", () => openDeliveryDialog({ title: "Delivered by Izuwan", location: "HQ Taman Wahyu" }));
 $("refreshLeadsButton").addEventListener("click", loadAll);
 $("importStarterButton").addEventListener("click", async () => {
-  if (inventoryRows.length && !confirm("Inventory sudah ada. Import juga stok asal?")) return;
+  if (inventoryRows.length && !await confirmAction("Inventory sudah mempunyai rekod. Import stok asal boleh menghasilkan duplicate.", "Import stok asal?", "Import juga")) return;
   const payload = (window.inventoryData || []).map(car => ({
     brand: car.brand, model: car.model, variant: car.variant, type: car.type,
     price: car.price, status: car.status, location: car.location,
@@ -915,7 +1012,7 @@ $("importPricelistButton").addEventListener("click", async () => {
   const rowsToInsert = mode === "update" ? [] : insertRows;
   const rowsToUpdate = mode === "insert" ? [] : updateRows;
   if (!rowsToInsert.length && !rowsToUpdate.length) return toast("Tiada stok untuk diimport mengikut mode ini");
-  if (!confirm(`Import pricelist sekarang?\n\nUpdate: ${rowsToUpdate.length}\nInsert: ${rowsToInsert.length}`)) return;
+  if (!await confirmAction(`Sistem akan update ${rowsToUpdate.length} rekod dan memasukkan ${rowsToInsert.length} rekod baru.`, "Import pricelist sekarang?", "Import pricelist")) return;
 
   $("importPricelistButton").disabled = true;
   $("importPricelistButton").textContent = "Importing...";
@@ -964,7 +1061,7 @@ $("inventoryTable").addEventListener("click", async event => {
   }
   if (editId) openCarDialog(inventoryRows.find(x => x.id === Number(editId)));
   if (photosId) return openPhotoManager(Number(photosId));
-  if (deleteId && confirm("Delete stok ini?")) {
+  if (deleteId && await confirmAction("Stok ini akan dipadam secara kekal dan tidak boleh dipulihkan.", "Padam stok?", "Padam stok")) {
     const { error } = await db.from("inventory").delete().eq("id", deleteId);
     if (error) return toast(error.message);
     toast("Stok dipadam");
@@ -1083,7 +1180,7 @@ $("bulkFeaturedOff").addEventListener("click", () => updateSelectedInventory({ i
 $("deleteSelectedInventory").addEventListener("click", async () => {
   const ids = [...selectedInventoryIds].map(Number).filter(Boolean);
   if (!ids.length) return toast("Pilih stok dahulu");
-  if (!confirm(`Delete ${ids.length} selected stok? Action ni tak boleh undo.`)) return;
+  if (!await confirmAction(`${ids.length} stok terpilih akan dipadam secara kekal. Tindakan ini tidak boleh dibatalkan.`, "Padam stok terpilih?", `Padam ${ids.length} stok`)) return;
   const { error } = await db.from("inventory").delete().in("id", ids);
   if (error) return toast(error.message);
   selectedInventoryIds.clear();
@@ -1094,7 +1191,7 @@ $("deleteSelectedInventory").addEventListener("click", async () => {
 $("removeDuplicateInventory").addEventListener("click", async () => {
   const ids = duplicateIdsToRemove();
   if (!ids.length) return toast("Tiada duplicate dikesan");
-  if (!confirm(`Remove ${ids.length} duplicate stok? Sistem akan keep satu record terbaru untuk setiap duplicate group.`)) return;
+  if (!await confirmAction(`${ids.length} duplicate akan dipadam. Sistem akan menyimpan satu rekod terbaru bagi setiap kumpulan.`, "Bersihkan duplicate?", `Padam ${ids.length} duplicate`)) return;
   const { error } = await db.from("inventory").delete().in("id", ids);
   if (error) return toast(error.message);
   ids.forEach(id => selectedInventoryIds.delete(String(id)));
@@ -1106,7 +1203,7 @@ $("eventsTable").addEventListener("click", async event => {
   const editId = event.target.dataset.editEvent;
   const deleteId = event.target.dataset.deleteEvent;
   if (editId) openEventDialog(eventRows.find(x => x.id === Number(editId)));
-  if (deleteId && confirm("Delete event ini?")) {
+  if (deleteId && await confirmAction("Event ini akan dipadam dan banner berkaitan tidak lagi muncul di website.", "Padam event?", "Padam event")) {
     const { error } = await db.from("site_events").delete().eq("id", deleteId);
     if (error) return toast(error.message);
     toast("Event dipadam");
@@ -1118,7 +1215,7 @@ $("deliveriesTable").addEventListener("click", async event => {
   const editId = event.target.dataset.editDelivery;
   const deleteId = event.target.dataset.deleteDelivery;
   if (editId) openDeliveryDialog(deliveryRows.find(x => x.id === Number(editId)));
-  if (deleteId && confirm("Delete delivery ini?")) {
+  if (deleteId && await confirmAction("Rekod delivery ini akan dipadam daripada homepage secara kekal.", "Padam delivery?", "Padam delivery")) {
     const { error } = await db.from("deliveries").delete().eq("id", deleteId);
     if (error) return toast(error.message);
     toast("Delivery dipadam");
@@ -1271,7 +1368,7 @@ $("salesmenTable").addEventListener("click", async event => {
   const editId = event.target.dataset.editSalesman;
   const deleteId = event.target.dataset.deleteSalesman;
   if (editId) openSalesmanDialog(salesmanRows.find(x => x.id === Number(editId)));
-  if (deleteId && confirm("Delete salesman ini?")) {
+  if (deleteId && await confirmAction("Profil salesman ini akan dipadam. Pertimbangkan untuk nyahaktifkan jika rekod masih diperlukan.", "Padam salesman?", "Padam salesman")) {
     const { error } = await db.from("salesmen").delete().eq("id", deleteId);
     if (error) return toast(error.message);
     toast("Salesman dipadam");

@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260630-2">
-  <link rel="stylesheet" href="admin-overrides.css?v=20260630-2">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="admin.css?v=20260713-1">
+  <link rel="stylesheet" href="admin-overrides.css?v=20260713-1">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="manifest" href="site.webmanifest">
@@ -24,22 +24,25 @@
       <label>Email<input id="loginEmail" type="email" required autocomplete="email"></label>
       <label>Password<input id="loginPassword" type="password" required autocomplete="current-password"></label>
       <button type="submit">Login admin</button>
-      <div class="admin-message" id="loginMessage"></div>
+      <div class="admin-message" id="loginMessage" role="status" aria-live="polite"></div>
       <small class="setup-warning hidden" id="setupWarning">Supabase belum disambungkan. Isi <code>config.js</code> dahulu.</small>
     </form>
   </section>
 
   <div class="admin-app hidden" id="adminView">
-    <aside class="admin-sidebar">
+    <aside class="admin-sidebar" id="adminSidebar">
       <div class="admin-brand"><span>IA</span><div><b>IZUWAN</b><small>ADMIN PANEL</small></div></div>
-      <nav>
-        <button class="admin-nav active" data-page="dashboard">Overview</button>
-        <button class="admin-nav" data-page="inventory">Inventory</button>
-        <button class="admin-nav" data-page="events">Events</button>
-        <button class="admin-nav" data-page="delivered">Delivered</button>
-        <button class="admin-nav" data-page="leads">Leads</button>
-        <button class="admin-nav" data-page="settings">Site & OTR</button>
-        <button class="admin-nav" data-page="salesmen">Salesmen</button>
+      <nav aria-label="Admin navigation">
+        <span class="admin-nav-group">OPERATIONS</span>
+        <button type="button" class="admin-nav active" data-page="dashboard">Overview</button>
+        <button type="button" class="admin-nav" data-page="inventory">Inventory</button>
+        <button type="button" class="admin-nav" data-page="leads">Website interactions</button>
+        <span class="admin-nav-group">MARKETING</span>
+        <button type="button" class="admin-nav" data-page="events">Events</button>
+        <button type="button" class="admin-nav" data-page="delivered">Customer deliveries</button>
+        <span class="admin-nav-group">BUSINESS</span>
+        <button type="button" class="admin-nav" data-page="salesmen">Sales team</button>
+        <button type="button" class="admin-nav" data-page="settings">Site & OTR settings</button>
       </nav>
       <a href="index.html" target="_blank">Buka website ↗</a>
       <button class="logout-btn" id="logoutButton">Logout</button>
@@ -48,7 +51,7 @@
     <main class="admin-main">
       <header class="admin-topbar">
         <div><span>IASB MANAGEMENT</span><h1 id="pageTitle">Overview</h1></div>
-        <button class="mobile-menu" id="mobileMenu">Menu</button>
+        <button class="mobile-menu" id="mobileMenu" type="button" aria-controls="adminSidebar" aria-expanded="false">Menu</button>
       </header>
 
       <section class="admin-page active" data-page-panel="dashboard">
@@ -57,7 +60,7 @@
           <article><span>Model aktif</span><strong id="statModels">0</strong></article>
           <article><span>Incoming</span><strong id="statIncoming">0</strong></article>
           <article><span>Delivered</span><strong id="statDelivered">0</strong></article>
-          <article><span>Lead clicks</span><strong id="statLeads">0</strong></article>
+          <article><span>Website interactions</span><strong id="statLeads">0</strong></article>
           <article><span>Salesmen</span><strong id="statSalesmen">0</strong></article>
         </div>
         <div class="dashboard-grid">
@@ -70,13 +73,25 @@
             <div id="eventSummary" class="event-summary"></div>
           </div>
         </div>
+        <div class="admin-card health-card">
+          <div class="card-title"><div><span>ACTION CENTRE</span><h2>Perkara yang perlukan perhatian</h2></div></div>
+          <p class="admin-help">Semakan automatik untuk membantu team menjaga inventory dan website sentiasa lengkap.</p>
+          <div class="admin-health-grid" id="adminHealth"></div>
+        </div>
       </section>
 
       <section class="admin-page" data-page-panel="inventory">
         <div class="admin-card">
           <div class="card-title">
             <div><span>STOCK MANAGEMENT</span><h2>Inventory</h2></div>
-            <div class="header-actions"><button id="importStarterButton">Import stok asal</button><button id="bulkPhotoManagerButton">Bulk photo upload</button><button class="accent-btn" id="addCarButton">+ Tambah stok</button></div>
+            <div class="header-actions">
+              <button type="button" id="showPricelistImporter">Upload pricelist</button>
+              <button type="button" class="accent-btn" id="addCarButton">+ Tambah stok</button>
+              <details class="admin-action-menu">
+                <summary aria-label="More inventory actions">More actions</summary>
+                <div><button type="button" id="importStarterButton">Import stok asal</button><button type="button" id="bulkPhotoManagerButton">Photo manager</button><button type="button" class="danger" id="removeDuplicateInventory">Remove duplicates</button></div>
+              </details>
+            </div>
           </div>
           <div class="inventory-admin-hero">
             <div>
@@ -90,11 +105,12 @@
             <input id="adminStockSearch" type="search" placeholder="Cari model, brand, lokasi...">
             <select id="adminStockStatus"><option value="all">Semua status</option><option>AVAILABLE</option><option>INCOMING</option><option>DONE PAID DUTI</option><option>PORT KLANG</option></select>
           </div>
-          <div class="pricelist-importer">
+          <div class="pricelist-importer" id="pricelistImporter" hidden>
             <div>
               <span>PRICELIST IMPORT</span>
               <h3>Upload pricelist CSV</h3>
               <p>Upload CSV untuk hasil paling tepat, atau PDF untuk bacaan best-effort. Sistem akan match stok ikut brand, model, year, grade dan variant.</p>
+              <button type="button" class="quiet-btn" id="closePricelistImporter">Tutup importer</button>
             </div>
             <div class="pricelist-controls">
               <input id="pricelistFile" type="file" accept=".csv,.txt,.tsv,.pdf,text/csv,text/plain,application/pdf">
@@ -122,7 +138,6 @@
               <button type="button" id="selectVisibleInventory">Select visible</button>
               <button type="button" id="clearInventorySelection">Clear</button>
               <button type="button" class="danger" id="deleteSelectedInventory">Delete selected</button>
-              <button type="button" class="danger soft-danger" id="removeDuplicateInventory">Remove duplicates</button>
             </div>
           </div>
           <div class="table-wrap">
@@ -137,10 +152,10 @@
       <section class="admin-page" data-page-panel="leads">
         <div class="admin-card">
           <div class="card-title">
-            <div><span>LEAD TRACKING</span><h2>Website leads</h2></div>
+            <div><span>INTERACTION TRACKING</span><h2>Website interactions</h2></div>
             <button id="refreshLeadsButton">Refresh</button>
           </div>
-          <p class="admin-help">Track clicks dari WhatsApp, car detail, calculator, event dan Find My Car wizard. Data ni membantu tengok page mana paling banyak convert.</p>
+          <p class="admin-help">Rekod klik WhatsApp, car detail, calculator, event dan Find My Car. Ini menunjukkan minat pengguna, bukan semestinya lead yang sudah menghubungi team.</p>
           <div class="lead-summary" id="leadSummary"></div>
           <div class="table-wrap">
             <table>
@@ -215,7 +230,7 @@
     </main>
   </div>
 
-  <dialog id="carDialog">
+  <dialog id="carDialog" aria-labelledby="carDialogTitle">
     <form method="dialog" class="dialog-card" id="carForm">
       <div class="card-title"><div><span>INVENTORY</span><h2 id="carDialogTitle">Tambah stok</h2></div><button class="close-dialog" type="button" data-close-dialog="carDialog">×</button></div>
       <input id="carId" type="hidden">
@@ -262,7 +277,7 @@
     </form>
   </dialog>
 
-  <dialog id="photoManagerDialog">
+  <dialog id="photoManagerDialog" aria-labelledby="photoManagerTitle">
     <div class="dialog-card photo-manager-shell">
       <div class="card-title">
         <div><span>STOCK PHOTOS</span><h2 id="photoManagerTitle">Photo manager</h2></div>
@@ -280,7 +295,7 @@
     </div>
   </dialog>
 
-  <dialog id="eventDialog">
+  <dialog id="eventDialog" aria-labelledby="eventDialogTitle">
     <form method="dialog" class="dialog-card" id="eventForm">
       <div class="card-title"><div><span>EVENT</span><h2 id="eventDialogTitle">Tambah event</h2></div><button class="close-dialog" type="button" data-close-dialog="eventDialog">×</button></div>
       <input id="eventId" type="hidden">
@@ -303,7 +318,7 @@
     </form>
   </dialog>
 
-  <dialog id="deliveryDialog">
+  <dialog id="deliveryDialog" aria-labelledby="deliveryDialogTitle">
     <form method="dialog" class="dialog-card" id="deliveryForm">
       <div class="card-title"><div><span>DELIVERED</span><h2 id="deliveryDialogTitle">Tambah delivery</h2></div><button class="close-dialog" type="button" data-close-dialog="deliveryDialog">×</button></div>
       <input id="deliveryId" type="hidden">
@@ -323,7 +338,7 @@
     </form>
   </dialog>
 
-  <dialog id="salesmanDialog">
+  <dialog id="salesmanDialog" aria-labelledby="salesmanDialogTitle">
     <form method="dialog" class="dialog-card" id="salesmanForm">
       <div class="card-title"><div><span>SALESMAN</span><h2 id="salesmanDialogTitle">Tambah salesman</h2></div><button class="close-dialog" type="button" data-close-dialog="salesmanDialog">×</button></div>
       <input id="salesmanId" type="hidden">
@@ -340,12 +355,20 @@
     </form>
   </dialog>
 
-  <div class="admin-toast" id="adminToast"></div>
+  <dialog class="confirm-dialog" id="confirmDialog" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+    <div class="confirm-card">
+      <span>CONFIRM ACTION</span>
+      <h2 id="confirmTitle">Sahkan tindakan</h2>
+      <p id="confirmMessage"></p>
+      <div class="dialog-actions"><button type="button" id="confirmCancel">Batal</button><button type="button" class="danger-confirm" id="confirmProceed">Teruskan</button></div>
+    </div>
+  </dialog>
+  <div class="admin-toast" id="adminToast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js?v=20260630-2"></script>
   <script src="data-service.js?v=20260630-2"></script>
   <script src="inventory.js?v=20260630-2"></script>
-  <script src="admin.js?v=20260630-2"></script>
+  <script src="admin.js?v=20260713-1"></script>
 </body>
 </html>
 
