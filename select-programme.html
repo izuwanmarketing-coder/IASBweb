@@ -19,7 +19,7 @@
   <meta name="twitter:image" content="https://thjzzfvoxqqvkgvrdjpr.supabase.co/storage/v1/object/public/branding/company-logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260713-1">
+  <link rel="stylesheet" href="styles.css?v=20260713-3">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
@@ -38,7 +38,30 @@
       <span class="company-kicker">IZUWAN SELECT PROGRAMME</span>
       <h1>Your car.<br>Your specification.</h1>
       <p>Tak jumpa unit yang tepat dalam ready stock? Beritahu kami model, grade, tahun, warna dan bajet anda—team Izuwan akan membantu mencari pilihan daripada auction Jepun.</p>
-      <div class="hero-actions"><a class="hero-primary" data-main-whatsapp target="_blank" rel="noopener">Start Sourcing <span>→</span></a><a class="hero-secondary" href="inventory.html">View Ready Stock</a></div>
+      <div class="hero-actions"><a class="hero-primary" href="#sourcingBrief">Build Your Brief <span>→</span></a><a class="hero-secondary" href="inventory.html">View Ready Stock</a></div>
+    </section>
+
+    <section class="programme-brief" id="sourcingBrief">
+      <div class="programme-brief-intro">
+        <span class="eyebrow">START YOUR SEARCH</span>
+        <h2>Give us the specification. We’ll take it from there.</h2>
+        <p>Isi keutamaan utama anda. Brief ini akan dihantar terus ke WhatsApp supaya advisor boleh mula semak pilihan dengan konteks yang lengkap.</p>
+        <div class="brief-assurance"><span>01 · No obligation</span><span>02 · Live market check</span><span>03 · Advisor follow-up</span></div>
+      </div>
+      <form class="programme-brief-form" id="programmeBriefForm">
+        <label>Model yang dicari<input id="briefModel" required placeholder="Contoh: Toyota Alphard"></label>
+        <label>Variant / grade<input id="briefVariant" placeholder="Contoh: 2.5 SC Package"></label>
+        <div class="programme-brief-pair">
+          <label>Tahun minimum<input id="briefYear" type="number" min="2000" max="2030" placeholder="2021"></label>
+          <label>Warna pilihan<input id="briefColour" placeholder="Black / Pearl White"></label>
+        </div>
+        <div class="programme-brief-pair">
+          <label>Bajet maksimum (RM)<input id="briefBudget" type="number" min="10000" step="1000" placeholder="250000"></label>
+          <label>Target pembelian<select id="briefTimeline"><option>Secepat mungkin</option><option>Dalam 1–3 bulan</option><option>Dalam 3–6 bulan</option><option>Masih survey</option></select></label>
+        </div>
+        <button type="submit">Send sourcing brief <span>↗</span></button>
+        <p>Harga, availability dan timeline sebenar bergantung pada pasaran auction serta spesifikasi unit.</p>
+      </form>
     </section>
 
     <section class="programme-overview">
@@ -89,7 +112,7 @@
     <section class="home-cta"><div><span class="eyebrow">TELL US YOUR SPEC</span><h2>Let Izuwan search Japan for you.</h2></div><div class="contact-actions"><a data-main-whatsapp target="_blank" rel="noopener">Start on WhatsApp</a><a href="contact.html">Visit Taman Wahyu</a></div></section>
   </main>
   <footer class="site-footer"><div class="brand muted"><span class="brand-mark">IA</span><span><strong data-brand-name>IZUWAN</strong><small>AUTOMOBILE</small></span></div><nav><a href="about.html">About</a><a href="select-programme.html">Select Programme</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></nav><p>Japan Reconditioned Car Specialist · Since 2011</p></footer>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=20260624-4"></script><script src="data-service.js?v=20260624-4"></script><script src="site.js?v=20260713-1"></script><script src="lead-tracker.js?v=20260624-4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=20260624-4"></script><script src="data-service.js?v=20260624-4"></script><script src="site.js?v=20260713-3"></script><script src="lead-tracker.js?v=20260624-4"></script><script src="select-programme-page.js?v=20260713-3"></script>
 </body>
 </html>
 

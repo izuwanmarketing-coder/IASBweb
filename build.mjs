@@ -42,6 +42,7 @@ const files = [
   "photo-curation.js",
   "privacy.html",
   "robots.txt",
+  "select-programme-page.js",
   "select-programme.html",
   "site.js",
   "site.webmanifest",

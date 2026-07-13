@@ -42,11 +42,11 @@
     if (mode === "target") {
       $("mainResultLabel").textContent = "Anggaran ansuran bulanan";
       $("resultDescription").textContent = `${years} tahun · deposit ${deposit}% · kadar ${rate}% p.a.`;
-      $("resultBadge").textContent = isEligible ? "BERPOTENSI LAYAK" : "MELEBIHI BAJET";
+      $("resultBadge").textContent = isEligible ? "DALAM JULAT DSR" : "MELEBIHI DSR";
     } else {
       $("mainResultLabel").textContent = "Bajet ansuran kereta";
       $("resultDescription").textContent = `Berdasarkan DSR ${dsrLimit}% dan komitmen semasa.`;
-      $("resultBadge").textContent = monthlyBudget > 0 ? "SELESA" : "SEMAK SEMULA";
+      $("resultBadge").textContent = monthlyBudget > 0 ? "DALAM JULAT DSR" : "SEMAK INPUT";
     }
     $("resultBadge").classList.toggle("warning", !isEligible);
   }
@@ -84,13 +84,30 @@ Tempoh: ${current.years} tahun
   }
 
   fields.forEach(id => $(id).addEventListener("input", calculate));
+  document.querySelector(".input-panel")?.addEventListener("submit", event => event.preventDefault());
   document.querySelectorAll("[data-mode]").forEach(button => button.addEventListener("click", () => {
     mode = button.dataset.mode;
-    document.querySelectorAll("[data-mode]").forEach(item => item.classList.toggle("active", item === button));
+    document.querySelectorAll("[data-mode]").forEach(item => {
+      const selected = item === button;
+      item.classList.toggle("active", selected);
+      item.setAttribute("aria-selected", String(selected));
+      item.tabIndex = selected ? 0 : -1;
+    });
+    $("calculatorShell").setAttribute("aria-labelledby", button.id);
     document.querySelectorAll(".target-only").forEach(item => item.classList.toggle("hidden", mode !== "target"));
-    $("formTitle").textContent = mode === "target" ? "Semak kereta pilihan customer" : "Profil kewangan customer";
+    $("formTitle").textContent = mode === "target" ? "Semak kereta pilihan anda" : "Profil kewangan anda";
     calculate();
   }));
+  document.querySelector(".tabs")?.addEventListener("keydown", event => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    const tabs = [...document.querySelectorAll("[data-mode]")];
+    const currentIndex = tabs.indexOf(document.activeElement);
+    if (currentIndex < 0) return;
+    event.preventDefault();
+    const nextIndex = (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    tabs[nextIndex].focus();
+    tabs[nextIndex].click();
+  });
 
   $("resetButton").addEventListener("click", () => {
     $("salary").value = 5000;
@@ -128,9 +145,15 @@ Tempoh: ${current.years} tahun
   if (params.has("price")) {
     mode = "target";
     $("carPrice").value = Number(params.get("price")) || 120000;
-    document.querySelectorAll("[data-mode]").forEach(item => item.classList.toggle("active", item.dataset.mode === "target"));
+    document.querySelectorAll("[data-mode]").forEach(item => {
+      const selected = item.dataset.mode === "target";
+      item.classList.toggle("active", selected);
+      item.setAttribute("aria-selected", String(selected));
+      item.tabIndex = selected ? 0 : -1;
+    });
+    $("calculatorShell").setAttribute("aria-labelledby", "targetTab");
     document.querySelectorAll(".target-only").forEach(item => item.classList.remove("hidden"));
-    $("formTitle").textContent = "Semak kereta pilihan customer";
+    $("formTitle").textContent = "Semak kereta pilihan anda";
     const selected = params.get("car");
     if (selected) {
       $("selectedCar").textContent = selected;

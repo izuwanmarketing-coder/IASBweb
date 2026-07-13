@@ -5,13 +5,30 @@
   const params = new URLSearchParams(location.search);
   const requestedId = params.get("id");
   const requestedSource = params.get("source");
-  const fallbackCars = [...(window.inventoryData || [])].map((car, index) => ({ ...car, _sourceIndex: index }));
+  const fallbackCars = [...(window.inventoryData || [])].map((car, index) => ({
+    ...car,
+    _sourceIndex: index,
+    _fallbackIndex: index
+  }));
   const fallbackPhotoMap = new Map(
-    fallbackCars.map((car, index) => [`${car.brand}|${car.model}|${car.variant}`.toLowerCase(), window.carPhotoData?.[index] || null])
+    fallbackCars.map((car, index) => [index, window.carPhotoData?.[index] || null])
   );
+  const fallbackCandidateMap = fallbackCars.reduce((map, car, index) => {
+    const key = `${car.brand}|${car.model}|${car.variant}`.toLowerCase();
+    map.set(key, [...(map.get(key) || []), index]);
+    return map;
+  }, new Map());
 
   const money = value => `RM ${Math.round(Number(value) || 0).toLocaleString("en-MY")}`;
+  const displayPrice = value => Number(value) >= 10000 ? money(value) : "Harga perlu disahkan";
   const mileage = value => Number(value) > 0 ? `${Math.round(Number(value)).toLocaleString("en-MY")} km` : "Upon request";
+  const statusLabel = value => window.IASBSite?.statusLabel(value) || String(value || "Ready Stock");
+
+  function formatUpdated(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString("ms-MY", { day: "numeric", month: "short", year: "numeric" });
+  }
 
   function safeText(value) {
     return String(value ?? "")
@@ -22,15 +39,34 @@
       .replaceAll("'", "&#039;");
   }
 
-  function keyFor(car) {
-    return `${car.brand}|${car.model}|${car.variant}`.toLowerCase();
+  function fallbackIndexFor(car) {
+    if (Number.isInteger(car._fallbackIndex)) return car._fallbackIndex;
+    const key = `${car.brand}|${car.model}|${car.variant}`.toLowerCase();
+    const candidates = fallbackCandidateMap.get(key) || [];
+    if (candidates.length <= 1) return candidates[0] ?? null;
+    const normalized = value => String(value ?? "").trim().toLowerCase();
+    const scored = candidates.map(index => {
+      const candidate = fallbackCars[index];
+      let score = 0;
+      if (Number(car.price) > 0 && Number(car.price) === Number(candidate.price)) score += 8;
+      if (normalized(car.location) && normalized(car.location) === normalized(candidate.location)) score += 4;
+      if (normalized(car.status) && normalized(car.status) === normalized(candidate.status)) score += 2;
+      if (Number(car.units) > 0 && Number(car.units) === Number(candidate.units)) score += 1;
+      return { index, score };
+    });
+    const bestScore = Math.max(...scored.map(item => item.score));
+    const winners = scored.filter(item => item.score === bestScore);
+    return winners.length === 1 ? winners[0].index : null;
   }
 
   function photosFor(car) {
     const urls = [];
     if (car.image_url) urls.push(car.image_url);
     (car.gallery_urls || []).forEach(url => url && urls.push(url));
-    const fallback = fallbackPhotoMap.get(keyFor(car))?.photos?.map(photo => photo.src) || [];
+    const fallbackIndex = fallbackIndexFor(car);
+    const fallback = fallbackIndex !== null
+      ? fallbackPhotoMap.get(fallbackIndex)?.photos?.map(photo => photo.src) || []
+      : [];
     fallback.forEach(url => url && urls.push(url));
     return [...new Set(urls)];
   }
@@ -39,7 +75,7 @@
     const list = (managedCars || []).map((car, index) => ({ ...car, _sourceIndex: car._sourceIndex ?? index }));
     if (requestedId) {
       const managed = list.find(car => String(car.id) === String(requestedId));
-      if (managed) return { car: managed, allCars: list };
+      return { car: managed || null, allCars: list };
     }
     if (requestedSource !== null && requestedSource !== "") {
       const fallback = fallbackCars[Number(requestedSource)] || list[Number(requestedSource)] || null;
@@ -52,9 +88,17 @@
     return `<div><span>${safeText(label)}</span><strong>${safeText(value || "Upon request")}</strong></div>`;
   }
 
-  function paymentEstimate(price, downpayment = 0, years = 9, rate = 3.2) {
-    const principal = Math.max(0, Number(price || 0) - Number(downpayment || 0));
-    const interest = principal * (Number(rate || 0) / 100) * Number(years || 0);
+  function paymentEstimate(price, downpayment, years = 9, rate) {
+    if (window.IASBSite?.monthlyEstimate) {
+      const options = { years };
+      if (downpayment !== undefined) options.downpayment = downpayment;
+      if (rate !== undefined) options.rate = rate;
+      return window.IASBSite.monthlyEstimate(price, options);
+    }
+    const deposit = downpayment === undefined ? Number(price || 0) * 0.1 : Number(downpayment || 0);
+    const effectiveRate = rate === undefined ? 3.2 : Number(rate || 0);
+    const principal = Math.max(0, Number(price || 0) - deposit);
+    const interest = principal * (effectiveRate / 100) * Number(years || 0);
     return Math.round((principal + interest) / (Number(years || 1) * 12));
   }
 
@@ -98,10 +142,10 @@
       <div class="similar-grid">${similar.map(item => {
         const href = item.id ? `car.html?id=${encodeURIComponent(item.id)}` : `car.html?source=${encodeURIComponent(item._sourceIndex ?? "")}`;
         return `<a href="${href}" class="similar-card">
-          <span>${safeText(item.status || "AVAILABLE")}</span>
+          <span>${safeText(statusLabel(item.status))}</span>
           <h3>${safeText(item.brand)} ${safeText(item.model)}</h3>
           <p>${safeText([item.year, item.grade, item.variant].filter(Boolean).join(" · ") || item.type || "Recond")}</p>
-          <strong>${money(item.price)}</strong>
+          <strong>${displayPrice(item.price)}</strong>
         </a>`;
       }).join("")}</div>
     </section>`;
@@ -112,7 +156,20 @@
     const detailLine = [car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "Japan reconditioned unit";
     const title = `${car.brand || ""} ${car.model || ""}`.trim() || "Izuwan ready stock";
     const photos = photosFor(car);
-    const monthly = paymentEstimate(car.price);
+    const validPrice = Number(car.price) >= 10000;
+    const monthly = validPrice ? paymentEstimate(car.price) : 0;
+    const assumptions = window.IASBSite?.financeAssumptions() || { depositPct: 10, years: 9, rate: 3.2 };
+    const defaultDownpayment = Math.round((Number(car.price) || 0) * assumptions.depositPct / 100);
+    const updated = formatUpdated(car.updated_at || car.created_at);
+    const auctionEvidence = car.auction_report
+      ? "Ditandakan tersedia untuk semakan bersama advisor."
+      : "Status report belum dinyatakan; minta advisor sahkan.";
+    const mileageEvidence = car.mileage_verified
+      ? `${mileage(car.mileage)} ditandakan telah disahkan.`
+      : `${mileage(car.mileage)} dipaparkan; minta pengesahan advisor.`;
+    const gradeEvidence = car.grade_verified
+      ? `${car.grade || "Grade unit"} ditandakan telah disahkan.`
+      : "Grade dan keadaan akhir perlu disahkan bersama advisor.";
     const whatsappMessage = `[Car Detail Page] Hai, saya berminat dengan ${title}${detailLine ? ` (${detailLine})` : ""}. Boleh share details dan availability terkini?`;
     document.title = `${title} | Izuwan Automobile`;
     document.getElementById("breadcrumbCar").textContent = title;
@@ -120,11 +177,11 @@
     root.innerHTML = `<section class="car-detail-shell car-detail-v2">
       <div class="car-detail-media">${renderGallery(photos, title)}</div>
       <article class="car-detail-panel">
-        <small>${safeText(car.status || "AVAILABLE")} · ${safeText(car.location || "Izuwan Automobile")}</small>
+        <small>${safeText(statusLabel(car.status))} · ${safeText(car.location || "Izuwan Automobile")}${updated ? ` · Dikemas kini ${safeText(updated)}` : ""}</small>
         <h1>${safeText(title)}</h1>
         <p>${safeText(car.description || detailLine)}</p>
         ${renderBadges(car)}
-        <div class="car-detail-price"><span>Estimated selling price</span><strong>${money(car.price)}</strong><em>Approx. ${money(monthly)}/month from 9 years, 3.2%</em></div>
+        <div class="car-detail-price"><span>Anggaran selling price</span><strong>${validPrice ? money(car.price) : "Harga perlu disahkan"}</strong>${validPrice ? `<em>± ${money(monthly)}/bulan · deposit ${assumptions.depositPct}% · ${assumptions.years} tahun · ${assumptions.rate}%</em>` : `<em>WhatsApp advisor untuk pengesahan harga terkini.</em>`}<small class="car-price-note">Harga OTR, insurance dan pembiayaan perlu disahkan bersama advisor.</small></div>
         <div class="car-spec-grid">
           ${spec("Year", car.year)}
           ${spec("Grade", car.grade || car.variant)}
@@ -143,16 +200,16 @@
       </article>
     </section>
     <section class="car-detail-tools">
-      <form class="payment-estimator" id="paymentEstimator">
+      ${validPrice ? `<form class="payment-estimator" id="paymentEstimator">
         <span class="eyebrow">PAYMENT ESTIMATOR</span>
         <h2>Quick monthly estimate.</h2>
         <div class="form-grid">
-          <label>Downpayment (RM)<input id="estimateDownpayment" type="number" min="0" value="0"></label>
+          <label>Downpayment (RM)<input id="estimateDownpayment" type="number" min="0" value="${defaultDownpayment}"></label>
           <label>Tenure<select id="estimateYears"><option value="5">5 years</option><option value="7">7 years</option><option value="9" selected>9 years</option></select></label>
-          <label>Interest (%)<input id="estimateRate" type="number" min="0" step="0.1" value="3.2"></label>
+          <label>Interest (%)<input id="estimateRate" type="number" min="0" step="0.1" value="${assumptions.rate}"></label>
           <label>Monthly estimate<output id="estimateOutput">${money(monthly)}</output></label>
         </div>
-      </form>
+      </form>` : `<div class="payment-estimator" id="paymentEstimator"><span class="eyebrow">PAYMENT ESTIMATOR</span><h2>Harga perlu disahkan dahulu.</h2><p>Hubungi advisor Izuwan untuk selling price terkini sebelum membuat anggaran pembiayaan.</p></div>`}
       <form class="viewing-card" id="viewingForm">
         <span class="eyebrow">VIEWING SLOT</span>
         <h2>Book a showroom viewing.</h2>
@@ -164,11 +221,29 @@
       </form>
     </section>
     <section class="car-confidence-strip">
-      <article><strong>Auction report</strong><span>Ask advisor untuk semakan report jika available.</span></article>
-      <article><strong>Loan & insurance</strong><span>Team Izuwan boleh bantu proses pembiayaan dan insurance.</span></article>
-      <article><strong>HQ Taman Wahyu</strong><span>Datang tengok unit atau booking viewing slot.</span></article>
+      <article class="${car.auction_report ? "verified" : "confirm"}"><small>${car.auction_report ? "AVAILABLE" : "CONFIRM"}</small><strong>Auction report</strong><span>${safeText(auctionEvidence)}</span></article>
+      <article class="${car.mileage_verified ? "verified" : "confirm"}"><small>${car.mileage_verified ? "VERIFIED" : "CONFIRM"}</small><strong>Mileage</strong><span>${safeText(mileageEvidence)}</span></article>
+      <article class="${car.grade_verified ? "verified" : "confirm"}"><small>${car.grade_verified ? "VERIFIED" : "CONFIRM"}</small><strong>Grade & condition</strong><span>${safeText(gradeEvidence)}</span></article>
     </section>
     ${renderSimilar(car, allCars)}`;
+
+    const mobileWhatsapp = document.querySelector("[data-mobile-whatsapp]");
+    if (mobileWhatsapp) {
+      mobileWhatsapp.dataset.whatsappMessage = whatsappMessage;
+      mobileWhatsapp.href = window.IASBSite.whatsappUrl(whatsappMessage);
+      mobileWhatsapp.querySelector("b").textContent = "Enquire car";
+    }
+    document.getElementById("paymentEstimator")?.addEventListener("submit", event => event.preventDefault());
+    const malaysiaDateParts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kuala_Lumpur",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date()).reduce((parts, item) => {
+      if (item.type !== "literal") parts[item.type] = item.value;
+      return parts;
+    }, {});
+    document.getElementById("viewingDate").min = `${malaysiaDateParts.year}-${malaysiaDateParts.month}-${malaysiaDateParts.day}`;
 
     let activePhoto = 0;
     const dialog = document.getElementById("carImageDialog");
@@ -192,7 +267,8 @@
     };
 
     document.querySelectorAll("[data-car-thumb-index]").forEach(button => button.addEventListener("click", () => updateGallery(Number(button.dataset.carThumbIndex))));
-    document.getElementById("openCarImage").onclick = openGallery;
+    const openCarImage = document.getElementById("openCarImage");
+    if (openCarImage) openCarImage.onclick = openGallery;
     document.getElementById("carImageClose").onclick = () => dialog.close();
     document.getElementById("carImagePrev").onclick = () => updateGallery(activePhoto - 1);
     document.getElementById("carImageNext").onclick = () => updateGallery(activePhoto + 1);
@@ -208,13 +284,16 @@
       if (Math.abs(distance) > 45) updateGallery(activePhoto + (distance < 0 ? 1 : -1));
     };
 
-    const updateEstimate = () => {
-      const downpayment = document.getElementById("estimateDownpayment").value;
-      const years = document.getElementById("estimateYears").value;
-      const rate = document.getElementById("estimateRate").value;
-      document.getElementById("estimateOutput").textContent = money(paymentEstimate(car.price, downpayment, years, rate));
-    };
-    ["estimateDownpayment", "estimateYears", "estimateRate"].forEach(id => document.getElementById(id).addEventListener("input", updateEstimate));
+    const estimateFields = ["estimateDownpayment", "estimateYears", "estimateRate"].map(id => document.getElementById(id)).filter(Boolean);
+    if (estimateFields.length === 3) {
+      const updateEstimate = () => {
+        const downpayment = document.getElementById("estimateDownpayment").value;
+        const years = document.getElementById("estimateYears").value;
+        const rate = document.getElementById("estimateRate").value;
+        document.getElementById("estimateOutput").textContent = money(paymentEstimate(car.price, downpayment, years, rate));
+      };
+      estimateFields.forEach(field => field.addEventListener("input", updateEstimate));
+    }
 
     document.getElementById("viewingForm").addEventListener("submit", event => {
       event.preventDefault();

@@ -2,27 +2,6 @@
   const grid = document.getElementById("deliveredGrid");
   if (!grid) return;
 
-  const fallbackItems = [
-    {
-      title: "Premium recond handover",
-      model: "Japan reconditioned selection",
-      location: "HQ Taman Wahyu",
-      caption: "Team Izuwan membantu customer memilih unit recond Jepun dengan proses yang lebih jelas dan yakin."
-    },
-    {
-      title: "Loan, insurance & handover",
-      model: "End-to-end assistance",
-      location: "Izuwan Automobile",
-      caption: "Dari semakan awal hingga serahan, team Izuwan bantu susun proses pembelian dengan jelas."
-    },
-    {
-      title: "Ready stock confidence",
-      model: "Viewed, selected, delivered",
-      location: "Kuala Lumpur",
-      caption: "Datang view ready stock di HQ atau WhatsApp advisor untuk semak availability terkini."
-    }
-  ];
-
   function safeText(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -39,20 +18,15 @@
   }
 
   function fallback() {
-    grid.innerHTML = fallbackItems.map(item => `<article class="delivered-card delivered-card-fallback">
-      <div class="delivered-photo"><span>IA</span></div>
-      <div class="delivered-copy">
-        <small>${safeText(item.location)}</small>
-        <h3>${safeText(item.title)}</h3>
-        <b>${safeText(item.model)}</b>
-        <p>${safeText(item.caption)}</p>
-      </div>
-    </article>`).join("");
+    grid.innerHTML = "";
+    document.getElementById("deliveredSection")?.classList.add("hidden");
   }
 
   function render(deliveries) {
-    const list = (deliveries || []).filter(item => item.is_active !== false).slice(0, 6);
+    const list = (deliveries || []).filter(item => item.is_active !== false && item.photo_url).slice(0, 6);
     if (!list.length) return fallback();
+
+    document.getElementById("deliveredSection")?.classList.remove("hidden");
 
     grid.innerHTML = list.map(item => {
       const meta = [item.location, formatDate(item.delivered_at)].filter(Boolean).join(" · ") || "Delivered by Izuwan";

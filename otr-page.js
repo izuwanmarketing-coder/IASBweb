@@ -33,6 +33,23 @@
     $("otrBalance").textContent = money(balance);
   }
 
+  function updateExportState() {
+    const hasModel = Boolean($("vehicleName").value.trim());
+    const hasPrice = value("otrSellingPrice") > 0;
+    const valid = hasModel && hasPrice;
+    ["otrWhatsappButton", "otrCopyButton", "printQuotationButton"].forEach(id => {
+      $(id).disabled = !valid;
+    });
+    const hasStarted = hasModel || hasPrice;
+    $("vehicleName").setAttribute("aria-invalid", String(hasStarted && !hasModel));
+    $("otrSellingPrice").setAttribute("aria-invalid", String(hasStarted && !hasPrice));
+    $("quotationFormStatus").textContent = valid
+      ? "Quotation sedia untuk disemak, dikongsi atau disimpan sebagai PDF."
+      : `Masukkan ${!hasModel && !hasPrice ? "model dan selling price" : !hasModel ? "model" : "selling price"} untuk aktifkan quotation.`;
+    $("quotationFormStatus").classList.toggle("ready", valid);
+    return valid;
+  }
+
   function summary() {
     return `IZUWAN AUTOMOBILE - TRANSACTION BREAKDOWN
 
@@ -73,6 +90,10 @@ Balance downpayment: ${$("otrBalance").textContent}
   }
 
   function saveQuotationPdf() {
+    if (!updateExportState()) {
+      showToast("Lengkapkan model dan selling price dahulu.");
+      return;
+    }
     const JsPdf = window.jspdf?.jsPDF;
     if (!JsPdf) {
       showToast("PDF generator belum tersedia. Sila cuba lagi.");
@@ -228,8 +249,13 @@ Balance downpayment: ${$("otrBalance").textContent}
     showToast("Quotation PDF disimpan");
   }
 
-  fieldIds.forEach(id => $(id).addEventListener("input", calculate));
+  fieldIds.forEach(id => $(id).addEventListener("input", () => {
+    calculate();
+    updateExportState();
+  }));
+  $("vehicleName").addEventListener("input", updateExportState);
   $("otrCopyButton").addEventListener("click", async () => {
+    if (!updateExportState()) return;
     try {
       await navigator.clipboard.writeText(summary());
       showToast("Breakdown OTR disalin");
@@ -238,6 +264,7 @@ Balance downpayment: ${$("otrBalance").textContent}
     }
   });
   $("otrWhatsappButton").addEventListener("click", () => {
+    if (!updateExportState()) return;
     const number = salesmen.length ? $("salesmanSelect").value : "";
     window.open(window.IASBSite.whatsappUrl(summary(), number), "_blank", "noopener");
   });
@@ -257,6 +284,7 @@ Balance downpayment: ${$("otrBalance").textContent}
       $("salesmanField").classList.remove("hidden");
     }
     calculate();
+    updateExportState();
   });
 
   const params = new URLSearchParams(location.search);
@@ -266,4 +294,5 @@ Balance downpayment: ${$("otrBalance").textContent}
   }
   if (params.has("car")) $("vehicleName").value = params.get("car");
   calculate();
+  updateExportState();
 })();

@@ -19,7 +19,7 @@
   <meta name="twitter:image" content="https://thjzzfvoxqqvkgvrdjpr.supabase.co/storage/v1/object/public/branding/company-logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260713-1">
+  <link rel="stylesheet" href="styles.css?v=20260713-3">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
@@ -37,10 +37,10 @@
     <section class="page-hero tool-page-hero"><span class="eyebrow">IZUWAN SALES TOOL</span><h1>Know your budget.<br>Choose with confidence.</h1><p>Tools sampingan untuk membuat anggaran awal kemampuan sebelum berbincang dengan sales advisor Izuwan.</p></section>
     <section class="calculator-page">
       <div class="selected-car hidden" id="selectedCar"></div>
-      <nav class="tabs"><button class="tab active" data-mode="eligibility"><span>01</span> Ikut Gaji</button><button class="tab" data-mode="target"><span>02</span> Kereta Target</button></nav>
-      <div class="calculator-shell">
+      <nav class="tabs" role="tablist" aria-label="Mode kalkulator"><button class="tab active" id="eligibilityTab" data-mode="eligibility" role="tab" aria-selected="true" aria-controls="calculatorShell"><span>01</span> Ikut Gaji</button><button class="tab" id="targetTab" data-mode="target" role="tab" aria-selected="false" aria-controls="calculatorShell" tabindex="-1"><span>02</span> Kereta Target</button></nav>
+      <div class="calculator-shell" id="calculatorShell" role="tabpanel" aria-labelledby="eligibilityTab">
         <form class="input-panel">
-          <div class="panel-heading"><div><span class="step-label">YOUR DETAILS</span><h2 id="formTitle">Profil kewangan customer</h2></div><button type="button" class="reset-btn" id="resetButton">Reset</button></div>
+          <div class="panel-heading"><div><span class="step-label">YOUR DETAILS</span><h2 id="formTitle">Profil kewangan anda</h2></div><button type="button" class="reset-btn" id="resetButton">Reset</button></div>
           <div class="field target-only hidden"><label for="carPrice">Harga kereta target</label><div class="money-input"><span>RM</span><input id="carPrice" type="number" min="10000" step="1000" value="120000"></div></div>
           <div class="field-grid">
             <div class="field"><label for="salary">Gaji bersih bulanan</label><div class="money-input"><span>RM</span><input id="salary" type="number" min="0" step="100" value="5000"></div></div>
@@ -54,8 +54,8 @@
           <details class="advanced"><summary>Tetapan lanjutan <span>+</span></summary><div class="field"><label for="interest">Kadar faedah anggaran</label><div class="money-input suffix"><input id="interest" type="number" min="1" max="8" step="0.1" value="3.2"><span>% p.a.</span></div></div></details>
         </form>
         <aside class="result-panel">
-          <div class="result-top"><span class="step-label">ANGGARAN KELAYAKAN</span><span class="result-badge" id="resultBadge">SELESA</span></div>
-          <div class="main-result"><span id="mainResultLabel">Bajet ansuran kereta</span><strong><small>RM</small><span id="monthlyBudget">0</span><small>/ bln</small></strong><p id="resultDescription"></p></div>
+          <div class="result-top"><span class="step-label">ANGGARAN KEMAMPUAN</span><span class="result-badge" id="resultBadge">ANGGARAN</span></div>
+          <div class="main-result" role="status" aria-live="polite"><span id="mainResultLabel">Bajet ansuran kereta</span><strong><small>RM</small><span id="monthlyBudget">0</span><small>/ bln</small></strong><p id="resultDescription"></p></div>
           <div class="metrics"><div><span>Anggaran harga kereta</span><strong id="maxPrice">RM 0</strong></div><div><span>Jumlah pinjaman</span><strong id="loanAmount">RM 0</strong></div><div><span>DSR selepas kereta</span><strong id="finalDsr">0%</strong></div><div><span>Deposit diperlukan</span><strong id="depositAmount">RM 0</strong></div></div>
           <div class="action-grid"><button type="button" class="primary-btn" id="whatsappButton"><span>Hantar ke WhatsApp</span><b>↗</b></button><button type="button" class="secondary-btn" id="copyButton">Salin ringkasan</button></div>
           <p class="disclaimer">* Anggaran awal sahaja. Kelulusan sebenar tertakluk kepada bank, CCRIS/CTOS, dokumen dan profil customer.</p>
@@ -66,7 +66,7 @@
   </main>
   <footer class="site-footer"><div class="brand muted"><span class="brand-mark">IA</span><span><strong data-brand-name>IZUWAN</strong><small>AUTOMOBILE</small></span></div><nav><a href="about.html">About</a><a href="select-programme.html">Select Programme</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></nav><p>Sales Tool · Anggaran Awal Sahaja</p></footer>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=20260624-4"></script><script src="data-service.js?v=20260624-4"></script><script src="site.js?v=20260713-1"></script><script src="lead-tracker.js?v=20260624-4"></script><script src="calculator-page.js?v=20260624-4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js?v=20260624-4"></script><script src="data-service.js?v=20260624-4"></script><script src="site.js?v=20260713-3"></script><script src="lead-tracker.js?v=20260624-4"></script><script src="calculator-page.js?v=20260713-3"></script>
 </body>
 </html>
 

@@ -1226,6 +1226,12 @@ $("deliveriesTable").addEventListener("click", async event => {
 $("carForm").addEventListener("submit", async event => {
   event.preventDefault();
   const id = $("carId").value;
+  const sellingPrice = Number($("carAdminPrice").value);
+  if (sellingPrice > 0 && sellingPrice < 10000) {
+    toast("Selling price nampak tidak lengkap. Semak semula jumlah penuh dalam RM.");
+    $("carAdminPrice").focus();
+    return;
+  }
   const manualGallery = uniqueUrls([
     $("carImageUrl").value.trim(),
     ...$("carGalleryUrls").value.split(/\r?\n/).map(url => url.trim()).filter(Boolean)
@@ -1237,7 +1243,7 @@ $("carForm").addEventListener("submit", async event => {
     grade: $("carGrade").value.trim(),
     variant: $("carVariant").value.trim(),
     type: $("carType").value,
-    price: Number($("carAdminPrice").value),
+    price: sellingPrice,
     mileage: $("carMileage").value ? Number($("carMileage").value) : null,
     status: $("carStatus").value,
     location: $("carLocation").value.trim(),

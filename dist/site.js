@@ -10,6 +10,26 @@
       .replaceAll("'", "&#039;");
   }
 
+  const stockStatusLabels = {
+    AVAILABLE: "Ready Stock",
+    INCOMING: "Akan Tiba",
+    "PORT KLANG": "Di Pelabuhan",
+    "DONE PAID DUTI": "Sedia Diproses",
+    RESERVED: "Ditempah",
+    BOOKED: "Ditempah",
+    SOLD: "Terjual"
+  };
+
+  const mainContent = document.querySelector("main");
+  if (mainContent) {
+    mainContent.id ||= "main-content";
+    const skipLink = document.createElement("a");
+    skipLink.className = "skip-link";
+    skipLink.href = "#main-content";
+    skipLink.textContent = "Langkau ke kandungan utama";
+    document.body.prepend(skipLink);
+  }
+
   function eventIsLive(event) {
     if (!event?.is_active) return false;
     const now = new Date();
@@ -47,6 +67,17 @@
       <a href="contact.html">Contact</a>
       <a class="tool-nav-link" href="calculator.html">Tools</a>`;
   }
+  const footerNav = document.querySelector(".site-footer nav");
+  if (footerNav) {
+    footerNav.innerHTML = `
+      <a href="inventory.html">Inventory</a>
+      <a href="about.html">About</a>
+      <a href="select-programme.html">Select Programme</a>
+      <a href="contact.html">Contact</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>`;
+    footerNav.setAttribute("aria-label", "Navigasi footer");
+  }
   $("menuButton")?.setAttribute("aria-controls", "siteNav");
 
   $("themeButton")?.addEventListener("click", () => {
@@ -65,6 +96,8 @@
     const current = location.pathname.split("/").pop() || "index.html";
     const target = link.getAttribute("href").split("#")[0] || "index.html";
     link.classList.toggle("active", current === target);
+    if (current === target) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
     link.addEventListener("click", () => {
       $("siteNav")?.classList.remove("open");
       $("menuButton")?.setAttribute("aria-expanded", "false");
@@ -78,11 +111,6 @@
     $("menuButton")?.focus();
   });
 
-  const progress = document.createElement("div");
-  progress.className = "scroll-progress";
-  progress.setAttribute("aria-hidden", "true");
-  document.body.appendChild(progress);
-
   const quickActions = document.createElement("div");
   quickActions.className = "quick-actions";
   quickActions.innerHTML = `
@@ -95,19 +123,47 @@
   const mobileActions = document.createElement("nav");
   mobileActions.className = "mobile-action-bar";
   mobileActions.setAttribute("aria-label", "Tindakan pantas");
+  const currentPage = location.pathname.split("/").pop() || "index.html";
+  const mobileContext = currentPage === "contact.html"
+    ? {
+        message: "Hai, saya ingin buat temu janji untuk melawat HQ Izuwan Automobile di Taman Wahyu.",
+        secondaryHref: "https://www.google.com/maps/search/?api=1&query=Izuwan+Automobile+Sdn+Bhd+Taman+Wahyu",
+        secondaryIcon: "MAP",
+        secondaryLabel: "Directions",
+        thirdHref: "inventory.html",
+        thirdIcon: "CAR",
+        thirdLabel: "Inventory",
+        external: true
+      }
+    : currentPage === "select-programme.html"
+      ? {
+          message: "Hai, saya berminat dengan Izuwan Select Programme dan ingin source kereta dari Jepun.",
+          secondaryHref: "inventory.html",
+          secondaryIcon: "CAR",
+          secondaryLabel: "Ready Stock",
+          thirdHref: "calculator.html",
+          thirdIcon: "RM",
+          thirdLabel: "Calculator"
+        }
+      : {
+          message: "Hai, saya ingin bertanya tentang kereta di Izuwan Automobile.",
+          secondaryHref: "inventory.html",
+          secondaryIcon: "CAR",
+          secondaryLabel: "Inventory",
+          thirdHref: "calculator.html",
+          thirdIcon: "RM",
+          thirdLabel: "Calculator"
+        };
   mobileActions.innerHTML = `
-    <a data-mobile-whatsapp target="_blank" rel="noopener"><span aria-hidden="true">WA</span><b>WhatsApp</b></a>
-    <a href="inventory.html"><span aria-hidden="true">⌕</span><b>Inventory</b></a>
-    <a href="calculator.html"><span aria-hidden="true">RM</span><b>Calculator</b></a>`;
+    <a data-mobile-whatsapp data-whatsapp-message="${safeText(mobileContext.message)}" target="_blank" rel="noopener"><span aria-hidden="true">WA</span><b>WhatsApp</b></a>
+    <a href="${mobileContext.secondaryHref}"${mobileContext.external ? ' target="_blank" rel="noopener"' : ""}><span aria-hidden="true">${mobileContext.secondaryIcon}</span><b>${mobileContext.secondaryLabel}</b></a>
+    <a href="${mobileContext.thirdHref}"><span aria-hidden="true">${mobileContext.thirdIcon}</span><b>${mobileContext.thirdLabel}</b></a>`;
   document.body.appendChild(mobileActions);
 
   const backToTop = quickActions.querySelector(".back-to-top");
   backToTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 
   function updateScrollUi() {
-    const max = document.documentElement.scrollHeight - window.innerHeight;
-    const ratio = max > 0 ? window.scrollY / max : 0;
-    progress.style.transform = `scaleX(${Math.min(1, Math.max(0, ratio))})`;
     document.querySelector(".page-topbar")?.classList.toggle("scrolled", window.scrollY > 18);
     backToTop.classList.toggle("visible", window.scrollY > 650);
   }
@@ -140,21 +196,30 @@
     revealTargets.forEach(node => node.classList.add("revealed"));
   }
 
-  if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
-    document.addEventListener("pointermove", event => {
-      const card = event.target.closest(
-        ".inventory-card, .home-services article, .values-grid article, .services-band article, .process-grid article, .team-grid article"
-      );
-      if (!card) return;
-      const rect = card.getBoundingClientRect();
-      card.style.setProperty("--pointer-x", `${event.clientX - rect.left}px`);
-      card.style.setProperty("--pointer-y", `${event.clientY - rect.top}px`);
-    });
-  }
-
   window.IASBSite = {
     settings: null,
     salesmen: [],
+    statusLabel(value) {
+      return stockStatusLabels[String(value || "AVAILABLE").toUpperCase()] || String(value || "Ready Stock");
+    },
+    financeAssumptions() {
+      return {
+        depositPct: 10,
+        years: 9,
+        rate: Number(this.settings?.default_interest) || 3.2
+      };
+    },
+    monthlyEstimate(price, options = {}) {
+      const assumptions = { ...this.financeAssumptions(), ...options };
+      const vehiclePrice = Math.max(0, Number(price) || 0);
+      const deposit = options.downpayment === undefined
+        ? vehiclePrice * (Number(assumptions.depositPct) || 0) / 100
+        : Math.max(0, Number(options.downpayment) || 0);
+      const principal = Math.max(0, vehiclePrice - deposit);
+      const years = Math.max(1, Number(assumptions.years) || 9);
+      const rate = Math.max(0, Number(assumptions.rate) || 0);
+      return Math.round((principal + principal * (rate / 100) * years) / (years * 12));
+    },
     whatsappUrl(message, preferredNumber = "") {
       const number = preferredNumber || this.settings?.whatsapp_number || window.IASB_CONFIG?.fallbackWhatsapp || "";
       const base = number ? `https://wa.me/${number.replace(/\D/g, "")}` : "https://wa.me/";
@@ -186,23 +251,29 @@
         link.href = this.whatsappUrl("Hai, saya ingin bertanya tentang kereta di Izuwan Automobile.");
       });
       document.querySelectorAll("[data-mobile-whatsapp]").forEach(link => {
-        link.href = this.whatsappUrl("Hai, saya ingin bertanya tentang kereta di Izuwan Automobile.");
+        link.href = this.whatsappUrl(link.dataset.whatsappMessage || "Hai, saya ingin bertanya tentang kereta di Izuwan Automobile.");
       });
 
-      if (settings?.promotion_banner) {
+      const liveEvent = (events || []).find(eventIsLive);
+      if (settings?.promotion_banner && !liveEvent) {
         document.querySelectorAll("[data-promotion-banner]").forEach(node => {
           node.textContent = settings.promotion_banner;
           node.classList.remove("hidden");
         });
+      } else {
+        document.querySelectorAll("[data-promotion-banner]").forEach(node => node.classList.add("hidden"));
       }
 
-      const liveEvent = (events || []).find(eventIsLive);
       document.querySelector(".site-event-banner")?.remove();
-      if (liveEvent) {
+      const showEventBanner = Boolean(liveEvent && currentPage === "index.html");
+      document.body.classList.toggle("has-live-event", showEventBanner);
+      if (showEventBanner) {
         const banner = document.createElement("section");
         banner.className = "site-event-banner";
         const dateText = [formatEventDate(liveEvent.start_date), formatEventDate(liveEvent.end_date)].filter(Boolean).join(" – ");
         const message = liveEvent.cta_message || `Hai, saya nak tahu info lanjut tentang ${liveEvent.title}.`;
+        const managedCta = liveEvent.cta_label || "WhatsApp";
+        const ctaText = managedCta.length > 20 ? "WhatsApp tawaran" : managedCta;
         banner.innerHTML = `
           <div class="site-event-media">${liveEvent.banner_url ? `<img src="${safeText(liveEvent.banner_url)}" alt="${safeText(liveEvent.title)}">` : `<span>IA</span>`}</div>
           <div class="site-event-copy">
@@ -213,7 +284,7 @@
           </div>
           <div class="site-event-actions">
             <a class="event-details-link" href="events.html">Info lanjut</a>
-            <a class="event-whatsapp-link" href="${this.whatsappUrl(message)}" target="_blank" rel="noopener">${safeText(liveEvent.cta_label || "WhatsApp")} <b>↗</b></a>
+            <a class="event-whatsapp-link" href="${this.whatsappUrl(message)}" target="_blank" rel="noopener">${safeText(ctaText)} <b>↗</b></a>
           </div>`;
         document.querySelector(".page-topbar")?.insertAdjacentElement("afterend", banner);
       }

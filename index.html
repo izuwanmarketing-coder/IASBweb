@@ -44,7 +44,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260713-1">
+  <link rel="stylesheet" href="styles.css?v=20260713-3">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
@@ -78,11 +78,16 @@
     <section class="home-hero">
       <div class="home-hero-copy">
         <span class="company-kicker">ESTABLISHED 2011 · 100% BUMIPUTERA</span>
-        <h1>Japan recond.<br><em>Chosen with confidence.</em></h1>
+        <h1><span>Japan recond.</span><em>Chosen with confidence.</em></h1>
         <p>Daripada ready stock premium hingga sourcing terus dari auction Jepun, Izuwan Automobile membantu anda mendapatkan kereta yang tepat dengan proses yang lebih jelas.</p>
         <div class="hero-actions">
           <a class="hero-primary" href="inventory.html">Explore Ready Stock <span>→</span></a>
           <a class="hero-secondary" href="find-car.html">Find My Car</a>
+        </div>
+        <div class="hero-assurance" aria-label="Key buying support">
+          <span><b>01</b> Ready stock</span>
+          <span><b>02</b> Japan sourcing</span>
+          <span><b>03</b> Loan support</span>
         </div>
       </div>
       <div class="home-hero-visual">
@@ -94,6 +99,33 @@
         </div>
       </div>
       <div class="hero-index">IZUWAN / 2011</div>
+    </section>
+
+    <section class="home-pathways" aria-labelledby="pathwayTitle">
+      <div class="pathway-heading">
+        <span class="eyebrow">START YOUR WAY</span>
+        <h2 id="pathwayTitle">Three ways to find the right car.</h2>
+      </div>
+      <div class="pathway-grid">
+        <a href="inventory.html">
+          <span>01 · READY NOW</span>
+          <h3>Explore ready stock.</h3>
+          <p>Lihat unit tersedia, harga, gambar dan lokasi showroom.</p>
+          <b>Browse inventory →</b>
+        </a>
+        <a href="find-car.html">
+          <span>02 · GUIDED CHOICE</span>
+          <h3>Build your car brief.</h3>
+          <p>Kongsi bajet dan kegunaan supaya advisor boleh semak pilihan sebenar yang lebih tepat.</p>
+          <b>Prepare my brief →</b>
+        </a>
+        <a href="select-programme.html">
+          <span>03 · YOUR SPEC</span>
+          <h3>Source from Japan.</h3>
+          <p>Pilih model, grade, warna dan spesifikasi melalui auction Jepun.</p>
+          <b>Explore Select Programme →</b>
+        </a>
+      </div>
     </section>
 
     <section class="featured-stock-section" id="featuredStockSection">
@@ -122,21 +154,16 @@
       <article><strong>9–7</strong><span>Waktu operasi HQ Taman Wahyu</span></article>
     </section>
 
-    <section class="delivered-section" id="deliveredSection">
+    <section class="delivered-section hidden" id="deliveredSection">
       <div class="section-heading">
         <div>
           <span class="eyebrow">DELIVERED BY IZUWAN</span>
           <h2>Real handovers. Real confidence.</h2>
-          <p>Social proof untuk customer yang nak rasa yakin sebelum datang HQ atau WhatsApp team Izuwan.</p>
+          <p>Serahan pelanggan sebenar yang direkodkan oleh team Izuwan Automobile.</p>
         </div>
         <a class="section-link" href="contact.html">Plan your visit →</a>
       </div>
-      <div class="delivered-grid" id="deliveredGrid">
-        <article class="delivered-card delivered-card-fallback">
-          <div class="delivered-photo"><span>IA</span></div>
-          <div><small>END-TO-END SUPPORT</small><h3>Dipandu dari pilihan hingga serahan.</h3><p>Team Izuwan membantu urusan semakan unit, pembiayaan, insurance dan proses handover.</p></div>
-        </article>
-      </div>
+      <div class="delivered-grid" id="deliveredGrid"></div>
     </section>
 
     <section class="home-intro">
@@ -205,10 +232,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js?v=20260624-4"></script>
   <script src="data-service.js?v=20260624-4"></script>
-  <script src="site.js?v=20260713-1"></script>
+  <script src="site.js?v=20260713-3"></script>
   <script src="lead-tracker.js?v=20260624-4"></script>
-  <script src="home-page.js?v=20260713-1"></script>
-  <script src="delivered-page.js?v=20260624-4"></script>
+  <script src="home-page.js?v=20260713-3"></script>
+  <script src="delivered-page.js?v=20260713-3"></script>
 </body>
 </html>
 

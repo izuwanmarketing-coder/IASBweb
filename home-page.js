@@ -4,6 +4,8 @@
 
   const money = value => `RM ${Math.round(Number(value) || 0).toLocaleString("en-MY")}`;
   const mileage = value => Number(value) > 0 ? `${Math.round(Number(value)).toLocaleString("en-MY")} km` : "Mileage upon request";
+  const displayPrice = value => Number(value) >= 10000 ? money(value) : "Harga perlu disahkan";
+  const statusLabel = value => window.IASBSite?.statusLabel(value) || String(value || "Ready Stock");
 
   function safeText(value) {
     return String(value ?? "")
@@ -28,7 +30,9 @@
   function render(cars) {
     const list = cars || [];
     const featured = list.filter(car => car.is_featured);
-    const displayCars = (featured.length ? featured : list).slice(0, 6);
+    const displayCars = (featured.length
+      ? [...featured, ...list.filter(car => !car.is_featured)]
+      : list).slice(0, 6);
     if (!displayCars.length) return fallback();
 
     grid.innerHTML = displayCars.map(car => {
@@ -40,7 +44,7 @@
           ? `<img loading="lazy" src="${safeText(car.image_url)}" alt="${safeText(`${car.brand} ${car.model}`)}">`
           : `<span>${safeText(car.brand || "IA")}</span>`}</div>
         <div class="featured-stock-copy">
-          <small>${safeText(car.status || "AVAILABLE")} · ${safeText(car.location || "Izuwan Automobile")}</small>
+          <small>${safeText(statusLabel(car.status))} · ${safeText(car.location || "Izuwan Automobile")}</small>
           <h3>${safeText(car.brand)} ${safeText(car.model)}</h3>
           <p>${safeText(detailLine)}</p>
           <div class="featured-stock-specs">
@@ -48,7 +52,7 @@
             <span>${safeText(mileage(car.mileage))}</span>
           </div>
           <div class="featured-stock-bottom">
-            <strong>${money(car.price)}</strong>
+            <strong>${displayPrice(car.price)}</strong>
             <span>
               <a class="featured-detail-link" href="${detailHref}">Details</a>
               <a href="${window.IASBSite.whatsappUrl(message)}" target="_blank" rel="noopener">Enquire →</a>
