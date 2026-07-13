@@ -69,8 +69,11 @@
 
   function renderGallery(photos, title) {
     if (!photos.length) return `<div class="car-detail-placeholder"><span>IA</span><p>Gambar akan dikemaskini</p></div>`;
-    return `<img class="car-main-image" id="carMainImage" src="${safeText(photos[0])}" alt="${safeText(title)}">
-      ${photos.length > 1 ? `<div class="car-thumbs">${photos.slice(0, 8).map((src, index) => `<button type="button" data-car-thumb="${safeText(src)}" class="${index === 0 ? "active" : ""}"><img src="${safeText(src)}" alt="${safeText(title)} thumbnail ${index + 1}"></button>`).join("")}</div>` : ""}`;
+    return `<button class="car-main-image-button" id="openCarImage" type="button" aria-label="Buka galeri ${safeText(title)} dalam skrin penuh">
+        <img class="car-main-image" id="carMainImage" src="${safeText(photos[0])}" alt="${safeText(title)}, gambar 1 daripada ${photos.length}">
+        <span class="car-image-expand">Lihat gambar penuh <b>↗</b></span>
+      </button>
+      ${photos.length > 1 ? `<div class="car-thumbs" aria-label="Pilihan gambar">${photos.slice(0, 12).map((src, index) => `<button type="button" data-car-thumb-index="${index}" class="${index === 0 ? "active" : ""}" aria-label="Lihat gambar ${index + 1} daripada ${photos.length}"><img src="${safeText(src)}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}`;
   }
 
   function renderBadges(car) {
@@ -167,10 +170,43 @@
     </section>
     ${renderSimilar(car, allCars)}`;
 
-    document.querySelectorAll("[data-car-thumb]").forEach(button => button.addEventListener("click", () => {
-      document.getElementById("carMainImage").src = button.dataset.carThumb;
-      document.querySelectorAll("[data-car-thumb]").forEach(item => item.classList.toggle("active", item === button));
-    }));
+    let activePhoto = 0;
+    const dialog = document.getElementById("carImageDialog");
+    const updateGallery = (index, updateMain = true) => {
+      activePhoto = (index + photos.length) % photos.length;
+      if (updateMain) {
+        document.getElementById("carMainImage").src = photos[activePhoto];
+        document.getElementById("carMainImage").alt = `${title}, gambar ${activePhoto + 1} daripada ${photos.length}`;
+      }
+      document.getElementById("carImageLarge").src = photos[activePhoto];
+      document.getElementById("carImageLarge").alt = `${title}, gambar ${activePhoto + 1} daripada ${photos.length}`;
+      document.getElementById("carImageDialogTitle").textContent = title;
+      document.getElementById("carImageCounter").textContent = `${activePhoto + 1} / ${photos.length}`;
+      document.querySelectorAll("[data-car-thumb-index]").forEach(item => item.classList.toggle("active", Number(item.dataset.carThumbIndex) === activePhoto));
+      document.getElementById("carImagePrev").hidden = photos.length < 2;
+      document.getElementById("carImageNext").hidden = photos.length < 2;
+    };
+    const openGallery = () => {
+      updateGallery(activePhoto, false);
+      dialog.showModal();
+    };
+
+    document.querySelectorAll("[data-car-thumb-index]").forEach(button => button.addEventListener("click", () => updateGallery(Number(button.dataset.carThumbIndex))));
+    document.getElementById("openCarImage").onclick = openGallery;
+    document.getElementById("carImageClose").onclick = () => dialog.close();
+    document.getElementById("carImagePrev").onclick = () => updateGallery(activePhoto - 1);
+    document.getElementById("carImageNext").onclick = () => updateGallery(activePhoto + 1);
+    dialog.onclick = event => { if (event.target === dialog) dialog.close(); };
+    dialog.onkeydown = event => {
+      if (event.key === "ArrowLeft") updateGallery(activePhoto - 1);
+      if (event.key === "ArrowRight") updateGallery(activePhoto + 1);
+    };
+    let touchStartX = 0;
+    dialog.ontouchstart = event => { touchStartX = event.changedTouches[0].clientX; };
+    dialog.ontouchend = event => {
+      const distance = event.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(distance) > 45) updateGallery(activePhoto + (distance < 0 ? 1 : -1));
+    };
 
     const updateEstimate = () => {
       const downpayment = document.getElementById("estimateDownpayment").value;
