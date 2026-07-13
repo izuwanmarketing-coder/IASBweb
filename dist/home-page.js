@@ -18,10 +18,20 @@
 
   function fallback() {
     grid.innerHTML = `<div class="featured-stock-fallback">
-      <span>PERSONAL STOCK ASSISTANCE</span>
-      <h3>Tak jumpa unit yang anda cari?</h3>
-      <p>Beritahu model, bajet dan warna pilihan. Team Izuwan akan semak ready stock serta pilihan sourcing yang sesuai.</p>
-      <a href="${window.IASBSite.whatsappUrl("[Homepage Featured Stock] Hai, saya ingin semak ready stock featured Izuwan Automobile.")}" target="_blank" rel="noopener">WhatsApp Izuwan →</a>
+      <div class="featured-fallback-copy">
+        <span>PERSONAL STOCK ASSISTANCE</span>
+        <h3>Ready stock sedang dikemaskini.</h3>
+        <p>Beritahu model, bajet dan warna pilihan. Team Izuwan akan semak unit tersedia serta pilihan sourcing yang sesuai untuk anda.</p>
+        <div class="featured-fallback-actions">
+          <a class="fallback-primary" href="${window.IASBSite.whatsappUrl("[Homepage Featured Stock] Hai, saya ingin semak ready stock featured Izuwan Automobile.")}" target="_blank" rel="noopener">WhatsApp untuk latest stock &rarr;</a>
+          <a href="inventory.html">Browse inventory</a>
+        </div>
+      </div>
+      <div class="featured-fallback-points" aria-label="Stock assistance benefits">
+        <span><b>01</b> Semakan availability</span>
+        <span><b>02</b> Cadangan ikut bajet</span>
+        <span><b>03</b> Ready stock atau sourcing</span>
+      </div>
     </div>`;
   }
 
