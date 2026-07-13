@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css?v=20260713-1">
-  <link rel="stylesheet" href="admin-overrides.css?v=20260714-2">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="admin-overrides.css?v=20260714-3">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="manifest" href="site.webmanifest">
@@ -89,7 +89,7 @@
               <button type="button" class="accent-btn" id="addCarButton">+ Tambah stok</button>
               <details class="admin-action-menu">
                 <summary aria-label="More inventory actions">More actions</summary>
-                <div><button type="button" id="importStarterButton">Import stok asal</button><button type="button" id="bulkPhotoManagerButton">Photo manager</button><button type="button" class="danger" id="removeDuplicateInventory">Remove duplicates</button></div>
+                <div><button type="button" id="importStarterButton">Import stok asal</button><button type="button" id="bulkPhotoManagerButton">Photo manager</button><button type="button" id="selectDuplicateChassis">Select duplicate chassis</button><button type="button" class="danger" id="removeDuplicateInventory">Remove chassis duplicates</button></div>
               </details>
             </div>
           </div>
@@ -102,8 +102,13 @@
             <div class="inventory-quick-stats" id="inventoryQuickStats"></div>
           </div>
           <div class="admin-filters">
-            <input id="adminStockSearch" type="search" placeholder="Cari model, brand, lokasi...">
+            <input id="adminStockSearch" type="search" placeholder="Cari model, chassis no., brand, lokasi...">
             <select id="adminStockStatus"><option value="all">Semua status</option><option>AVAILABLE</option><option>INCOMING</option><option>DONE PAID DUTI</option><option>PORT KLANG</option></select>
+            <select id="adminChassisFilter"><option value="all">Semua chassis</option><option value="duplicate">Duplicate chassis</option><option value="missing">Chassis belum diisi</option><option value="complete">Chassis lengkap</option></select>
+          </div>
+          <div class="chassis-control-panel">
+            <div><span>CHASSIS CONTROL</span><strong id="chassisHealthSummary">Checking chassis records...</strong><small>Duplicate dikesan berdasarkan nombor chassis sebenar, bukan model atau harga.</small></div>
+            <div><button type="button" id="showDuplicateChassis">Review duplicates</button><button type="button" id="showMissingChassis">Missing chassis</button><button type="button" id="resetChassisFilter">Show all</button></div>
           </div>
           <div class="pricelist-importer" id="pricelistImporter" hidden>
             <div>
@@ -143,7 +148,7 @@
           </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th class="select-col"><input id="selectAllInventory" type="checkbox" aria-label="Select all visible inventory"></th><th>Model</th><th>Lokasi</th><th>Status</th><th>Harga</th><th>Mileage</th><th>Unit</th><th></th></tr></thead>
+              <thead><tr><th class="select-col"><input id="selectAllInventory" type="checkbox" aria-label="Select all visible inventory"></th><th>Model</th><th>Chassis No.</th><th>Lokasi</th><th>Status</th><th>Harga</th><th>Mileage</th><th>Unit</th><th></th></tr></thead>
               <tbody id="inventoryTable"></tbody>
             </table>
           </div>
@@ -247,6 +252,7 @@
         <label>Status<select id="carStatus"><option>AVAILABLE</option><option>INCOMING</option><option>DONE PAID DUTI</option><option>PORT KLANG</option><option>SOLD</option><option>BOOKED</option></select></label>
         <label>Lokasi<input id="carLocation"></label>
         <label>Jumlah unit<input id="carUnits" type="number" min="1" value="1"></label>
+        <label>Chassis no.<input id="carChassisNo" autocomplete="off" placeholder="Contoh: AGH30-0428282"><small id="carChassisHint" class="field-hint">Digunakan untuk detect duplicate dan carian stok.</small></label>
         <label>Campaign tag<input id="carCampaignTag" placeholder="E-Carnival Stock Clearance"></label>
         <label>Marketing label<input id="carMarketingLabel" placeholder="Hot deal / New arrival"></label>
         <label>Engine<input id="carEngine" placeholder="2.5L / 3.5L / Hybrid"></label>
@@ -367,9 +373,9 @@
   <div class="admin-toast" id="adminToast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js?v=20260630-2"></script>
-  <script src="data-service.js?v=20260630-2"></script>
+  <script src="data-service.js?v=20260714-3"></script>
   <script src="inventory.js?v=20260630-2"></script>
-  <script src="admin.js?v=20260714-2"></script>
+  <script src="admin.js?v=20260714-3"></script>
 </body>
 </html>
 

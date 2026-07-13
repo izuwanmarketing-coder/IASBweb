@@ -81,6 +81,45 @@ function slugify(value) {
     .replace(/(^-|-$)/g, "") || "stock";
 }
 
+function normalizeChassis(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, "")
+    .replace(/[^A-Z0-9-]/g, "");
+}
+
+function looksLikeChassis(value) {
+  const normalized = normalizeChassis(value);
+  return normalized.length >= 5 && /[A-Z]/.test(normalized) && /\d/.test(normalized);
+}
+
+function chassisFor(car = {}) {
+  const direct = normalizeChassis(car.chassis_no);
+  if (direct) return direct;
+  return looksLikeChassis(car.marketing_label) ? normalizeChassis(car.marketing_label) : "";
+}
+
+function chassisGroups() {
+  const groups = new Map();
+  inventoryRows.forEach(car => {
+    const key = chassisFor(car);
+    if (!key) return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(car);
+  });
+  return groups;
+}
+
+function duplicateChassisGroups() {
+  return [...chassisGroups().entries()].filter(([, group]) => group.length > 1);
+}
+
+function duplicateChassisKeys() {
+  return new Set(duplicateChassisGroups().map(([key]) => key));
+}
+
 function uniqueUrls(urls) {
   return [...new Set((urls || []).map(url => String(url || "").trim()).filter(Boolean))];
 }
@@ -218,7 +257,7 @@ function renderDashboard() {
     [noPhotos, "Stok tanpa gambar", "Tambah visual supaya listing lebih meyakinkan.", "inventory", noPhotos ? "warning" : "good"],
     [incomplete, "Maklumat belum lengkap", "Harga, lokasi, brand atau model masih kosong.", "inventory", incomplete ? "warning" : "good"],
     [stale, "Tidak dikemas kini 30+ hari", "Semak availability dan status unit lama.", "inventory", stale ? "warning" : "good"],
-    [duplicates, "Duplicate records", "Review rekod berulang sebelum cleanup.", "inventory", duplicates ? "danger" : "good"],
+    [duplicates, "Duplicate chassis", "Review nombor chassis berulang sebelum cleanup.", "inventory", duplicates ? "danger" : "good"],
     [interactionsToday, "Interactions hari ini", "Klik berniat tinggi daripada website.", "leads", "info"],
     [liveEvent ? 1 : 0, "Campaign live", liveEvent ? liveEvent.title : "Tiada campaign aktif.", "events", liveEvent ? "good" : "info"]
   ];
@@ -231,29 +270,20 @@ function renderDashboard() {
 function filteredInventory() {
   const search = $("adminStockSearch").value.trim().toLowerCase();
   const status = $("adminStockStatus").value;
+  const chassisFilter = $("adminChassisFilter")?.value || "all";
+  const duplicateKeys = duplicateChassisKeys();
   return inventoryRows.filter(car =>
     (status === "all" || car.status === status) &&
-    (!search || [car.brand, car.model, car.variant, car.grade, car.year, car.location].join(" ").toLowerCase().includes(search))
+    (chassisFilter === "all" ||
+      (chassisFilter === "duplicate" && duplicateKeys.has(chassisFor(car))) ||
+      (chassisFilter === "missing" && !chassisFor(car)) ||
+      (chassisFilter === "complete" && Boolean(chassisFor(car)))) &&
+    (!search || [car.brand, car.model, car.variant, car.grade, car.year, car.location, chassisFor(car)].join(" ").toLowerCase().includes(search))
   );
 }
 
 function duplicateGroups() {
-  const groups = new Map();
-  inventoryRows.forEach(car => {
-    const key = [
-      car.brand,
-      car.model,
-      car.year || "",
-      car.grade || "",
-      car.variant || "",
-      car.type || "",
-      Number(car.price || 0),
-      car.location || ""
-    ].map(value => String(value).trim().toLowerCase()).join("|");
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(car);
-  });
-  return [...groups.values()].filter(group => group.length > 1);
+  return duplicateChassisGroups().map(([, group]) => group);
 }
 
 function duplicateIdsToRemove() {
@@ -340,6 +370,8 @@ function inferBrandAndModel(rawBrand, rawModel) {
 }
 
 function inventoryImportKey(car) {
+  const chassis = chassisFor(car);
+  if (chassis) return `chassis|${chassis.toLowerCase()}`;
   return [
     car.brand,
     car.model,
@@ -370,6 +402,7 @@ function normalizePricelistRow(row, headerMap, lineNumber) {
     units: parseInteger(pickValue(row, headerMap, ["units", "unit", "qty", "quantity"])) || 1,
     campaign_tag: pickValue(row, headerMap, ["campaign", "campaigntag", "event", "promo"]),
     marketing_label: pickValue(row, headerMap, ["label", "marketinglabel", "tag"]),
+    chassis_no: normalizeChassis(pickValue(row, headerMap, ["chassis", "chassisno", "chassisnumber", "vin", "stockno", "stocknumber"])),
     engine: pickValue(row, headerMap, ["engine", "cc"]),
     transmission: pickValue(row, headerMap, ["transmission", "gearbox"]),
     exterior_color: pickValue(row, headerMap, ["color", "colour", "exterior", "exteriorcolor", "warna"]),
@@ -539,7 +572,8 @@ function parsePdfPricelistLines(lines) {
       status,
       location,
       units: 1,
-      marketing_label: reference,
+      chassis_no: normalizeChassis(reference),
+      marketing_label: "",
       is_active: true,
       updated_at: new Date().toISOString()
     });
@@ -573,7 +607,7 @@ function pricelistImportPlan(records = parsedPricelistRows) {
 function renderPricelistPreview(errors = []) {
   const { insertRows, updateRows } = pricelistImportPlan();
   const sample = parsedPricelistRows.slice(0, 4).map(row => `
-    <tr><td>${safeText(row.brand)} ${safeText(row.model)}</td><td>${safeText([row.year, row.grade, row.variant].filter(Boolean).join(" · ") || "-")}</td><td>${money(row.price)}</td><td>${safeText(row.status)}</td></tr>
+    <tr><td>${safeText(row.brand)} ${safeText(row.model)}</td><td>${safeText(chassisFor(row) || "-")}</td><td>${safeText([row.year, row.grade, row.variant].filter(Boolean).join(" · ") || "-")}</td><td>${money(row.price)}</td><td>${safeText(row.status)}</td></tr>
   `).join("");
   $("importPricelistButton").disabled = !parsedPricelistRows.length;
   $("pricelistPreview").innerHTML = parsedPricelistRows.length ? `
@@ -583,7 +617,7 @@ function renderPricelistPreview(errors = []) {
       <article><span>Will insert</span><strong>${insertRows.length}</strong></article>
       <article><span>Skipped</span><strong>${errors.length}</strong></article>
     </div>
-    <table><thead><tr><th>Model</th><th>Spec</th><th>Price</th><th>Status</th></tr></thead><tbody>${sample}</tbody></table>
+    <table><thead><tr><th>Model</th><th>Chassis</th><th>Spec</th><th>Price</th><th>Status</th></tr></thead><tbody>${sample}</tbody></table>
     ${errors.length ? `<small>${safeText(errors.slice(0, 3).join(" | "))}${errors.length > 3 ? " ..." : ""}</small>` : ""}
   ` : `Tiada row valid dijumpai. Pastikan file ada header Brand, Model dan Price.`;
 }
@@ -593,11 +627,13 @@ function renderInventoryQuickStats(visibleRows = filteredInventory()) {
   const featured = active.filter(car => car.is_featured).length;
   const withPhotos = active.filter(car => getCarGallery(car).length > 0).length;
   const hidden = visibleRows.filter(car => !car.is_active).length;
+  const withChassis = visibleRows.filter(car => chassisFor(car)).length;
   const totalUnits = active.reduce((sum, car) => sum + Number(car.units || 1), 0);
   $("inventoryQuickStats").innerHTML = [
     ["Visible stock", `${active.length}`, `${totalUnits} unit live`],
     ["Featured", `${featured}`, "Homepage picks"],
     ["With photos", `${withPhotos}`, "Gallery attached"],
+    ["Chassis ready", `${withChassis}`, `${Math.max(0, visibleRows.length - withChassis)} missing`],
     ["Hidden", `${hidden}`, "Draft / hidden"]
   ].map(([label, value, hint]) => `
     <article>
@@ -606,6 +642,20 @@ function renderInventoryQuickStats(visibleRows = filteredInventory()) {
       <small>${safeText(hint)}</small>
     </article>
   `).join("");
+}
+
+function renderChassisHealth() {
+  const duplicateGroups = duplicateChassisGroups();
+  const duplicateRows = duplicateGroups.reduce((sum, [, group]) => sum + group.length, 0);
+  const missing = inventoryRows.filter(car => !chassisFor(car)).length;
+  const unique = chassisGroups().size;
+  $("chassisHealthSummary").textContent = duplicateRows
+    ? `${duplicateGroups.length} duplicate chassis group · ${duplicateRows} rows untuk review`
+    : `${unique} unique chassis · ${missing} belum diisi · tiada duplicate`;
+  $("showDuplicateChassis").disabled = duplicateRows === 0;
+  $("selectDuplicateChassis").disabled = duplicateRows === 0;
+  $("removeDuplicateInventory").disabled = duplicateRows === 0;
+  $("showMissingChassis").disabled = missing === 0;
 }
 
 function renderCarPhotoPreview(car = {}) {
@@ -626,8 +676,8 @@ function syncInventoryBulkToolbar(visibleRows = filteredInventory()) {
   const duplicateCount = duplicateIdsToRemove().length;
   $("selectedInventoryCount").textContent = `${selectedTotal} selected`;
   $("duplicateInventoryHint").textContent = duplicateCount
-    ? `${duplicateCount} duplicate row${duplicateCount > 1 ? "s" : ""} detected`
-    : "No duplicates detected";
+    ? `${duplicateCount} duplicate chassis row${duplicateCount > 1 ? "s" : ""} boleh dibuang`
+    : "No chassis duplicates detected";
   $("deleteSelectedInventory").disabled = selectedTotal === 0;
   $("removeDuplicateInventory").disabled = duplicateCount === 0;
   $("clearInventorySelection").disabled = selectedTotal === 0;
@@ -740,6 +790,20 @@ function formatLeadTime(value) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-MY", { dateStyle: "short", timeStyle: "short" });
 }
 
+function updateCarChassisHint(currentId = $("carId")?.value) {
+  const value = normalizeChassis($("carChassisNo")?.value);
+  const matches = value
+    ? inventoryRows.filter(car => chassisFor(car) === value && String(car.id) !== String(currentId || ""))
+    : [];
+  const hint = $("carChassisHint");
+  if (!hint) return matches;
+  hint.classList.toggle("duplicate", matches.length > 0);
+  hint.textContent = matches.length
+    ? `Duplicate: chassis ini sudah digunakan oleh ${matches.map(car => `${car.brand} ${car.model} (#${car.id})`).join(", ")}.`
+    : value ? "Chassis unique. Format akan disimpan dalam huruf besar tanpa ruang." : "Digunakan untuk detect duplicate dan carian stok.";
+  return matches;
+}
+
 function openCarDialog(car = {}) {
   $("carDialogTitle").textContent = car.id ? "Edit stok" : "Tambah stok";
   $("carId").value = car.id || "";
@@ -754,6 +818,7 @@ function openCarDialog(car = {}) {
   $("carStatus").value = car.status || "AVAILABLE";
   $("carLocation").value = car.location || "";
   $("carUnits").value = car.units || 1;
+  $("carChassisNo").value = chassisFor(car);
   $("carCampaignTag").value = car.campaign_tag || "";
   $("carMarketingLabel").value = car.marketing_label || "";
   $("carEngine").value = car.engine || "";
@@ -769,6 +834,7 @@ function openCarDialog(car = {}) {
   $("carAuctionReport").checked = Boolean(car.auction_report);
   $("carMileageVerified").checked = Boolean(car.mileage_verified);
   $("carGradeVerified").checked = Boolean(car.grade_verified);
+  updateCarChassisHint(car.id);
   $("carDialog").showModal();
 }
 
@@ -899,7 +965,9 @@ async function openPhotoManager(carId) {
 
 renderInventory = function renderInventoryEnhanced() {
   const visibleRows = filteredInventory();
+  const duplicateKeys = duplicateChassisKeys();
   renderInventoryQuickStats(visibleRows);
+  renderChassisHealth();
   $("inventoryTable").innerHTML = visibleRows.map(car => `
     <tr>
       <td class="select-col"><input class="inventory-row-check" type="checkbox" data-select-car="${car.id}" ${selectedInventoryIds.has(String(car.id)) ? "checked" : ""} aria-label="Select ${safeText(car.brand)} ${safeText(car.model)}"></td>
@@ -908,14 +976,20 @@ renderInventory = function renderInventoryEnhanced() {
         <small>${safeText([car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "-")}</small>
         <small>${getCarGallery(car).length ? `${getCarGallery(car).length} photos attached` : "No photos yet"}</small>
       </td>
+      <td class="chassis-cell ${duplicateKeys.has(chassisFor(car)) ? "is-duplicate" : ""}">
+        <code>${safeText(chassisFor(car) || "NOT SET")}</code>
+        ${duplicateKeys.has(chassisFor(car)) ? '<span class="mini-badge chassis-alert">DUPLICATE</span>' : `<small>${chassisFor(car) ? "Unique chassis" : "Add chassis in Edit"}</small>`}
+        ${chassisFor(car) ? `<button type="button" class="chassis-copy" data-copy-chassis="${safeText(chassisFor(car))}">Copy</button>` : ""}
+      </td>
       <td>${safeText(car.location)}</td>
       <td><span class="status-chip ${adminStatusClass(car.is_active ? car.status : "HIDDEN")}"><i aria-hidden="true"></i>${safeText(adminStatusLabel(car.is_active ? car.status : "HIDDEN"))}</span></td>
       <td>${money(car.price)}</td>
       <td>${km(car.mileage)}</td>
       <td>${Number(car.units || 1)}</td>
       <td><div class="row-actions"><button data-edit-car="${car.id}">Edit</button><button data-photos-car="${car.id}">Photos</button><button class="danger" data-delete-car="${car.id}">Delete</button></div></td>
-    </tr>`).join("") || `<tr><td colspan="8">Tiada stok dijumpai.</td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="9">Tiada stok dijumpai.</td></tr>`;
   syncInventoryBulkToolbar(visibleRows);
+  labelAdminTables();
 };
 
 openCarDialog = function openCarDialogEnhanced(car = {}) {
@@ -932,6 +1006,7 @@ openCarDialog = function openCarDialogEnhanced(car = {}) {
   $("carStatus").value = car.status || "AVAILABLE";
   $("carLocation").value = car.location || "";
   $("carUnits").value = car.units || 1;
+  $("carChassisNo").value = chassisFor(car);
   $("carCampaignTag").value = car.campaign_tag || "";
   $("carMarketingLabel").value = car.marketing_label || "";
   $("carEngine").value = car.engine || "";
@@ -948,6 +1023,7 @@ openCarDialog = function openCarDialogEnhanced(car = {}) {
   $("carMileageVerified").checked = Boolean(car.mileage_verified);
   $("carGradeVerified").checked = Boolean(car.grade_verified);
   renderCarPhotoPreview(car);
+  updateCarChassisHint(car.id);
   $("carDialog").showModal();
 };
 
@@ -1007,6 +1083,31 @@ document.querySelectorAll("[data-close-dialog]").forEach(button => button.addEve
 document.querySelectorAll(".close-dialog").forEach(button => button.setAttribute("aria-label", "Tutup dialog"));
 $("adminStockSearch").addEventListener("input", renderInventory);
 $("adminStockStatus").addEventListener("change", renderInventory);
+$("adminChassisFilter").addEventListener("change", renderInventory);
+$("showDuplicateChassis").addEventListener("click", () => {
+  $("adminChassisFilter").value = "duplicate";
+  renderInventory();
+});
+$("showMissingChassis").addEventListener("click", () => {
+  $("adminChassisFilter").value = "missing";
+  renderInventory();
+});
+$("resetChassisFilter").addEventListener("click", () => {
+  $("adminChassisFilter").value = "all";
+  renderInventory();
+});
+$("selectDuplicateChassis").addEventListener("click", () => {
+  selectedInventoryIds.clear();
+  duplicateChassisGroups().forEach(([, group]) => group.forEach(car => selectedInventoryIds.add(String(car.id))));
+  $("adminChassisFilter").value = "duplicate";
+  renderInventory();
+  toast(`${selectedInventoryIds.size} duplicate chassis rows dipilih untuk review`);
+});
+$("carChassisNo").addEventListener("input", () => updateCarChassisHint());
+$("carChassisNo").addEventListener("blur", event => {
+  event.target.value = normalizeChassis(event.target.value);
+  updateCarChassisHint();
+});
 $("addCarButton").addEventListener("click", () => openCarDialog());
 $("carImageUrl").addEventListener("input", () => renderCarPhotoPreview({
   id: $("carId").value,
@@ -1133,6 +1234,12 @@ $("inventoryTable").addEventListener("click", async event => {
   const editId = event.target.dataset.editCar;
   const photosId = event.target.dataset.photosCar;
   const deleteId = event.target.dataset.deleteCar;
+  const copyChassis = event.target.dataset.copyChassis;
+  if (copyChassis) {
+    await navigator.clipboard.writeText(copyChassis);
+    toast(`${copyChassis} copied`);
+    return;
+  }
   if (selectId) {
     if (event.target.checked) selectedInventoryIds.add(String(selectId));
     else selectedInventoryIds.delete(String(selectId));
@@ -1270,12 +1377,12 @@ $("deleteSelectedInventory").addEventListener("click", async () => {
 
 $("removeDuplicateInventory").addEventListener("click", async () => {
   const ids = duplicateIdsToRemove();
-  if (!ids.length) return toast("Tiada duplicate dikesan");
-  if (!await confirmAction(`${ids.length} duplicate akan dipadam. Sistem akan menyimpan satu rekod terbaru bagi setiap kumpulan.`, "Bersihkan duplicate?", `Padam ${ids.length} duplicate`)) return;
+  if (!ids.length) return toast("Tiada duplicate chassis dikesan");
+  if (!await confirmAction(`${ids.length} duplicate chassis akan dipadam. Sistem akan menyimpan satu rekod terbaru bagi setiap nombor chassis.`, "Bersihkan duplicate chassis?", `Padam ${ids.length} duplicate`)) return;
   const { error } = await db.from("inventory").delete().in("id", ids);
   if (error) return toast(error.message);
   ids.forEach(id => selectedInventoryIds.delete(String(id)));
-  toast(`${ids.length} duplicate stok dipadam`);
+  toast(`${ids.length} duplicate chassis dipadam`);
   await loadAll();
 });
 
@@ -1306,6 +1413,13 @@ $("deliveriesTable").addEventListener("click", async event => {
 $("carForm").addEventListener("submit", async event => {
   event.preventDefault();
   const id = $("carId").value;
+  const chassisNo = normalizeChassis($("carChassisNo").value);
+  const chassisMatches = updateCarChassisHint(id);
+  if (chassisMatches.length) {
+    toast(`Duplicate chassis: ${chassisNo} sudah digunakan oleh stok #${chassisMatches[0].id}`);
+    $("carChassisNo").focus();
+    return;
+  }
   const sellingPrice = Number($("carAdminPrice").value);
   if (sellingPrice > 0 && sellingPrice < 10000) {
     toast("Selling price nampak tidak lengkap. Semak semula jumlah penuh dalam RM.");
@@ -1328,6 +1442,7 @@ $("carForm").addEventListener("submit", async event => {
     status: $("carStatus").value,
     location: $("carLocation").value.trim(),
     units: Number($("carUnits").value) || 1,
+    chassis_no: chassisNo || null,
     campaign_tag: $("carCampaignTag").value.trim(),
     marketing_label: $("carMarketingLabel").value.trim(),
     engine: $("carEngine").value.trim(),

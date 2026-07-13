@@ -31,6 +31,7 @@
       exterior_color: row.exterior_color || "",
       interior_color: row.interior_color || "",
       campaign_tag: row.campaign_tag || "",
+      chassis_no: row.chassis_no || "",
       marketing_label: row.marketing_label || "",
       is_featured: Boolean(row.is_featured),
       is_hot: Boolean(row.is_hot),

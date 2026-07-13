@@ -143,6 +143,49 @@ textarea {
   vertical-align: middle;
 }
 
+.admin-filters {
+  grid-template-columns: minmax(240px, 1fr) 190px 190px;
+}
+
+.chassis-control-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 12px;
+  padding: 15px 16px;
+  border: 1px solid rgba(255, 255, 255, .11);
+  background: linear-gradient(120deg, rgba(255,255,255,.035), rgba(226,27,35,.045));
+}
+.chassis-control-panel span,
+.chassis-control-panel strong,
+.chassis-control-panel small { display: block; }
+.chassis-control-panel span { color: var(--accent); font-size: 9px; font-weight: 900; letter-spacing: .15em; }
+.chassis-control-panel strong { margin-top: 5px; font: 800 15px "Manrope"; }
+.chassis-control-panel small { margin-top: 3px; color: var(--muted); font-size: 11px; }
+.chassis-control-panel > div:last-child { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
+.chassis-control-panel button,
+.chassis-copy {
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.chassis-control-panel button:hover,
+.chassis-copy:hover { border-color: var(--accent); color: var(--accent); }
+.chassis-cell code { display: block; color: #f5f5f5; font: 800 11px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.chassis-cell small { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; }
+.chassis-cell.is-duplicate code { color: #ff7a80; }
+.chassis-copy { min-height: 28px; margin-top: 6px; padding: 0 8px; }
+.mini-badge.chassis-alert { border-color: rgba(255, 122, 128, .55); color: #ff7a80; }
+.field-hint { display: block; min-height: 16px; margin: -10px 0 14px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.field-hint.duplicate { color: #ff7a80; }
+
 .bulk-toolbar {
   display: flex;
   align-items: center;
@@ -530,6 +573,11 @@ textarea {
 }
 
 @media (max-width: 850px) {
+  .admin-filters { grid-template-columns: 1fr 1fr; }
+  .admin-filters input { grid-column: 1 / -1; }
+  .chassis-control-panel { align-items: flex-start; flex-direction: column; }
+  .chassis-control-panel > div:last-child { justify-content: flex-start; }
+
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -551,6 +599,9 @@ textarea {
 }
 
 @media (max-width: 520px) {
+  .admin-filters { grid-template-columns: 1fr; }
+  .admin-filters input { grid-column: auto; }
+
   .card-title {
     flex-direction: column;
   }

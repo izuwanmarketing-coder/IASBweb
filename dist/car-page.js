@@ -124,7 +124,7 @@
   function renderBadges(car) {
     const badges = [
       car.campaign_tag,
-      car.marketing_label,
+      car.chassis_no || car.marketing_label,
       car.is_hot ? "Hot pick" : "",
       car.auction_report ? "Auction report available" : "",
       car.mileage_verified ? "Mileage verified" : "",
@@ -192,6 +192,7 @@
           ${spec("Transmission", car.transmission || "Automatic")}
           ${spec("Exterior", car.exterior_color)}
           ${spec("Location", car.location || "HQ / showroom")}
+          ${spec("Chassis No.", car.chassis_no || "Upon request")}
         </div>
         <div class="car-detail-actions">
           <a href="${window.IASBSite.whatsappUrl(whatsappMessage)}" data-lead-action="car_whatsapp" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(title)}" target="_blank" rel="noopener">WhatsApp enquiry</a>

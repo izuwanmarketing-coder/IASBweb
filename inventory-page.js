@@ -133,7 +133,7 @@
           <span>${gallery.photos.length} gambar</span>
         </button>`
       : `<div class="inventory-photo inventory-photo-empty"><span>Gambar akan datang</span></div>`;
-    const badges = [car.campaign_tag, car.marketing_label, car.is_hot ? "Hot pick" : "", car.auction_report ? "Auction report" : "", car.mileage_verified ? "Mileage verified" : ""].filter(Boolean);
+    const badges = [car.campaign_tag, car.chassis_no || car.marketing_label, car.is_hot ? "Hot pick" : "", car.auction_report ? "Auction report" : "", car.mileage_verified ? "Mileage verified" : ""].filter(Boolean);
     const validPrice = hasValidSellingPrice(car.price);
 
     return `<article class="inventory-card">
