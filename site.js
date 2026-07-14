@@ -303,7 +303,7 @@
 
   (async function loadSharedData() {
     try {
-      if (!window.IASBData?.configured) return;
+      if (!window.IASBData?.configured && !window.IASBData?.sheetConfigured) return;
       const managed = await window.IASBData.loadPublicData();
       window.IASBSite.applyManagedData(managed.settings, managed.salesmen, managed.events);
       window.dispatchEvent(new CustomEvent("iasb:data", { detail: managed }));

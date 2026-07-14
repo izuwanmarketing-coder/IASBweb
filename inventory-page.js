@@ -336,7 +336,7 @@
   }
 
   window.addEventListener("iasb:data", event => {
-    initialize(event.detail.inventory || [], "managed");
+    initialize(event.detail.inventory || [], event.detail.inventorySource || "managed");
   });
   window.addEventListener("iasb:error", () => showState(
     "error",
