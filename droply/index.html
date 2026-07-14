@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="The private media toolkit for the Izuwan Automobile team.">
+  <title>droply! — Save the good stuff</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav><a class="brand" href="#top"><span>↓</span>droply!</a><div class="nav-links"><a href="#how">How it works</a><a href="#access">Office access</a><b>Cloudflare edition ✦</b></div></nav>
+  <main>
+    <section class="hero" id="top">
+      <div class="orb orb-pink"></div><div class="orb orb-blue"></div><div class="sticker">PRIVATE TELEGRAM STAYS LOCAL</div>
+      <div class="eyebrow">✦ YOUR LINKS. YOUR FILES.</div>
+      <h1>Save the <em>good stuff</em>.</h1>
+      <p class="lede">Paste a post. Grab the video, image, audio or a complete Telegram album. No ads, no sketchy pop-ups.</p>
+      <form class="link-box" id="mediaForm"><span class="link-icon">↗</span><input id="mediaUrl" type="url" placeholder="Paste TikTok, IG, Facebook or Telegram link..." required><button type="button" class="paste" id="pasteButton">▣ Paste</button><button class="action" id="getButton">⚡ Get media</button></form>
+      <div class="platforms"><span class="mint"><i>♪</i>TikTok</span><span class="pink"><i>◎</i>Instagram</span><span class="blue"><i>f</i>Facebook</span><span class="sky"><i>➤</i>Telegram</span></div>
+      <div id="result" aria-live="polite"></div>
+    </section>
+    <section class="dark" id="how"><div class="section-head"><div><small>SAFE BY DESIGN</small><h2>Public face.<br>Private engine.</h2></div><p>The Cloudflare page sends download requests through an encrypted tunnel. Browser cookies and Telegram sessions stay on the trusted office PC.</p></div><div class="cards"><article><b>01</b><span>↗</span><h3>Drop the link</h3><p>Copy a supported public post or a private Telegram message link.</p></article><article class="purple"><b>02</b><span>⌁</span><h3>Secure processing</h3><p>The trusted Droply workstation fetches the media without exposing its session.</p></article><article><b>03</b><span>↓</span><h3>Save together</h3><p>Telegram albums arrive as one tidy ZIP instead of separate downloads.</p></article></div></section>
+    <section class="access" id="access"><div><small>OFFICE MODE</small><h2>Your Telegram stays on your PC.</h2><p>API credentials, Telegram session and browser cookies are never bundled into this Cloudflare frontend.</p></div><div class="safe-card"><span>✓</span><div><b>Encrypted Cloudflare Tunnel</b><p>The workstation must remain online while the team uses Droply.</p></div></div></section>
+  </main>
+  <footer><b>↓ droply!</b><p>Only save media you own or have permission to download.</p></footer>
+  <script src="app.js"></script>
+</body>
+</html>

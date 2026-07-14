@@ -1,0 +1,7 @@
+{
+  "name": "droply-cloudflare",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}

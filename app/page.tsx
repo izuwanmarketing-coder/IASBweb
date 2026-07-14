@@ -1,761 +1,345 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
-import clsx from "clsx";
-import { BadgeDollarSign, Building2, Car, Check, Download, Edit3, FileText, Home, Menu, Plus, Save, Search, Settings, Trash2, X } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
-  Invoice,
-  InvoiceItem,
-  InvoiceStatus,
-  InvoiceType,
-  blankInvoice,
-  calculateInvoice,
-  defaultCompany,
-  money,
-  sampleInvoices
-} from "@/lib/invoice";
+  ArrowDownToLine,
+  Check,
+  ChevronDown,
+  Clipboard,
+  Download,
+  Facebook,
+  Film,
+  Image as ImageIcon,
+  Instagram,
+  Link2,
+  LockKeyhole,
+  Loader2,
+  Music2,
+  Play,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  X,
+  Zap
+} from "lucide-react";
 
-type View = "dashboard" | "create" | "preview" | "history" | "settings";
+type MediaInfo = {
+  title: string;
+  thumbnail: string | null;
+  uploader: string;
+  duration: number | null;
+  platform: string;
+  kind: "video" | "image";
+  itemCount?: number;
+};
 
-const storageKey = "izuwan-invoices-v1";
-const companyKey = "izuwan-company-v1";
-const statuses: InvoiceStatus[] = ["Draft", "Pending", "Paid", "Cancelled"];
-const invoiceTypes: InvoiceType[] = ["Vehicle Sale", "Custom Invoice"];
+const platforms = [
+  { name: "TikTok", icon: Music2, color: "bg-[#72f5dc]" },
+  { name: "Instagram", icon: Instagram, color: "bg-[#ff9acb]" },
+  { name: "Facebook", icon: Facebook, color: "bg-[#91b5ff]" },
+  { name: "Telegram", icon: Send, color: "bg-[#a9dcff]" }
+];
 
-function normalizeInvoices(value: unknown, company: typeof defaultCompany): Invoice[] {
-  if (!Array.isArray(value)) return sampleInvoices();
-
-  return value.map((invoice, index) => {
-    const fallback = blankInvoice(index, company);
-    const next = { ...fallback, ...invoice, company } as Invoice;
-    next.invoiceType = next.invoiceType ?? "Vehicle Sale";
-    next.customer = { ...fallback.customer, ...(invoice as Partial<Invoice>)?.customer };
-    next.vehicle = { ...fallback.vehicle, ...(invoice as Partial<Invoice>)?.vehicle };
-    next.payment = { ...fallback.payment, ...(invoice as Partial<Invoice>)?.payment };
-    next.items = Array.isArray((invoice as Partial<Invoice>)?.items) && (invoice as Partial<Invoice>).items!.length ? (invoice as Partial<Invoice>).items! : fallback.items;
-    return next;
-  });
+function formatDuration(value: number | null) {
+  if (!value) return "Post";
+  const minutes = Math.floor(value / 60);
+  const seconds = Math.floor(value % 60);
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-export default function InvoiceGenerator() {
-  const [view, setView] = useState<View>("dashboard");
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [current, setCurrent] = useState<Invoice | null>(null);
-  const [company, setCompany] = useState(defaultCompany);
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"All" | InvoiceStatus>("All");
-  const [toast, setToast] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState<Invoice | null>(null);
-  const [ready, setReady] = useState(false);
+export default function Home() {
+  const [url, setUrl] = useState("");
+  const [mode, setMode] = useState<"video" | "audio">("video");
+  const [quality, setQuality] = useState("best");
+  const [info, setInfo] = useState<MediaInfo | null>(null);
+  const [status, setStatus] = useState<"idle" | "fetching" | "ready" | "downloading" | "done" | "error">("idle");
+  const [message, setMessage] = useState("");
+  const [privateOpen, setPrivateOpen] = useState(false);
+  const [browser, setBrowser] = useState("none");
+  const [telegram, setTelegram] = useState({ stage: "offline", name: "", error: "" });
+  const [telegramForm, setTelegramForm] = useState({ apiId: "", apiHash: "", phone: "+60", input: "" });
+  const [authBusy, setAuthBusy] = useState(false);
 
-  useEffect(() => {
+  async function refreshTelegram() {
     try {
-      const savedCompany = localStorage.getItem(companyKey);
-      const savedInvoices = localStorage.getItem(storageKey);
-      const parsedCompany = savedCompany ? { ...defaultCompany, ...JSON.parse(savedCompany) } : defaultCompany;
-      const parsedInvoices = savedInvoices ? normalizeInvoices(JSON.parse(savedInvoices), parsedCompany) : sampleInvoices();
-      setCompany(parsedCompany);
-      setInvoices(parsedInvoices);
-      setCurrent(blankInvoice(parsedInvoices.length, parsedCompany));
+      const response = await fetch("/api/telegram/status", { cache: "no-store" });
+      const data = await response.json();
+      setTelegram(data);
+      return data;
+    } catch { return null; }
+  }
+
+  useEffect(() => { void refreshTelegram(); }, []);
+
+  useEffect(() => {
+    if (!["connecting", "code", "password"].includes(telegram.stage)) return;
+    const timer = window.setInterval(() => void refreshTelegram(), 1200);
+    return () => window.clearInterval(timer);
+  }, [telegram.stage]);
+
+  useEffect(() => {
+    if (telegram.stage !== "connecting") return;
+    const timeout = window.setTimeout(() => setTelegram((value) => value.stage === "connecting"
+      ? { ...value, stage: "error", error: "Telegram is taking too long to respond. Check the connection and try again." }
+      : value), 15_000);
+    return () => window.clearTimeout(timeout);
+  }, [telegram.stage]);
+
+  const hostname = useMemo(() => {
+    try {
+      return new URL(url).hostname.replace("www.", "");
     } catch {
-      const fallbackInvoices = sampleInvoices();
-      setCompany(defaultCompany);
-      setInvoices(fallbackInvoices);
-      setCurrent(blankInvoice(fallbackInvoices.length, defaultCompany));
-    } finally {
-      setReady(true);
+      return "";
     }
-  }, []);
+  }, [url]);
 
-  useEffect(() => {
-    if (ready) localStorage.setItem(storageKey, JSON.stringify(invoices));
-  }, [invoices, ready]);
+  async function pasteLink() {
+    try {
+      const value = await navigator.clipboard.readText();
+      setUrl(value);
+      setInfo(null);
+      setStatus("idle");
+    } catch {
+      setMessage("Clipboard access is blocked. Paste with Ctrl + V.");
+      setStatus("error");
+    }
+  }
 
-  useEffect(() => {
-    if (ready) localStorage.setItem(companyKey, JSON.stringify(company));
-  }, [company, ready]);
+  async function inspect(event: FormEvent) {
+    event.preventDefault();
+    setInfo(null);
+    setStatus("fetching");
+    setMessage("");
+    try {
+      const response = await fetch("/api/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, browser })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not read this link.");
+      setInfo(data);
+      setStatus("ready");
+    } catch (error) {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Could not read this link.");
+    }
+  }
 
-  const selectedInvoice = current ?? blankInvoice(invoices.length, company);
-  const totals = useMemo(() => invoices.map((invoice) => calculateInvoice(invoice)), [invoices]);
-  const filteredInvoices = invoices.filter((invoice) => {
-    const haystack = `${invoice.invoiceNumber} ${invoice.invoiceType ?? "Vehicle Sale"} ${invoice.customer.fullName} ${invoice.vehicle.make} ${invoice.vehicle.model} ${invoice.items.map((item) => item.description).join(" ")}`.toLowerCase();
-    return haystack.includes(query.toLowerCase()) && (filter === "All" || invoice.status === filter);
-  });
-  const stats = {
-    count: invoices.length,
-    value: totals.reduce((sum, total) => sum + total.totalPayable, 0),
-    paid: totals.reduce((sum, total) => sum + total.paid, 0),
-    balance: totals.reduce((sum, total) => sum + total.balance, 0)
-  };
+  async function downloadMedia() {
+    if (!info) return;
+    setStatus("downloading");
+    setMessage("");
+    try {
+      const response = await fetch("/api/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, mode, quality, browser })
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Download failed.");
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition") || "";
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] || `${info.title}.${mode === "audio" ? "mp3" : "mp4"}`;
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+      setStatus("done");
+      window.setTimeout(() => setStatus("ready"), 2600);
+    } catch (error) {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Download failed.");
+    }
+  }
 
-  const notify = (message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(""), 2400);
-  };
+  async function startTelegram(event: FormEvent) {
+    event.preventDefault();
+    setAuthBusy(true);
+    try {
+      const response = await fetch("/api/telegram/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(telegramForm) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setTelegram(data);
+      await refreshTelegram();
+    } catch (error) { setTelegram((value) => ({ ...value, stage: "error", error: error instanceof Error ? error.message : "Login failed." })); }
+    finally { setAuthBusy(false); }
+  }
 
-  const updateCurrent = (patch: Partial<Invoice>) => {
-    setCurrent({ ...selectedInvoice, ...patch, updatedAt: new Date().toISOString() });
-  };
-
-  const saveInvoice = () => {
-    const invoice = { ...selectedInvoice, company, updatedAt: new Date().toISOString() };
-    setInvoices((list) => {
-      const exists = list.some((item) => item.id === invoice.id);
-      return exists ? list.map((item) => (item.id === invoice.id ? invoice : item)) : [invoice, ...list];
-    });
-    setCurrent(invoice);
-    notify("Invoice saved locally");
-  };
-
-  const newInvoice = () => {
-    setCurrent(blankInvoice(invoices.length, company));
-    setView("create");
-    notify("New invoice ready");
-  };
-
-  const editInvoice = (invoice: Invoice) => {
-    setCurrent({ ...invoice, company });
-    setView("create");
-  };
-
-  const deleteInvoice = () => {
-    if (!confirmDelete) return;
-    setInvoices((list) => list.filter((invoice) => invoice.id !== confirmDelete.id));
-    if (current?.id === confirmDelete.id) setCurrent(blankInvoice(invoices.length, company));
-    setConfirmDelete(null);
-    notify("Invoice deleted");
-  };
-
-  const printInvoice = () => {
-    saveInvoice();
-    window.setTimeout(() => window.print(), 100);
-  };
-
-  if (!current) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-mist">
-        <div className="rounded-lg border border-black/10 bg-white p-8 text-center shadow-soft">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-md bg-ink text-gold">
-            <FileText size={20} />
-          </div>
-          <p className="mt-4 text-sm font-medium text-graphite">Loading invoice studio</p>
-        </div>
-      </main>
-    );
+  async function submitTelegram(event: FormEvent) {
+    event.preventDefault();
+    setAuthBusy(true);
+    try {
+      const response = await fetch("/api/telegram/input", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: telegram.stage, value: telegramForm.input }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setTelegramForm((value) => ({ ...value, input: "" }));
+      setTelegram(data);
+    } catch (error) { setTelegram((value) => ({ ...value, error: error instanceof Error ? error.message : "Could not continue." })); }
+    finally { setAuthBusy(false); }
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f7f7f5_0%,#eeeeea_48%,#f7f7f5_100%)]">
-      <div className="flex min-h-screen">
-        <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-white/10 bg-[linear-gradient(180deg,#090909,#151515)] text-white shadow-premium lg:block">
-          <BrandBlock />
-          <Nav view={view} setView={setView} newInvoice={newInvoice} />
-        </aside>
+    <main className="min-h-screen overflow-hidden bg-[#f7f3e8] text-[#171717]">
+      <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:url('data:image/svg+xml,%3Csvg viewBox=%220 0 180 180%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22 opacity=%22.8%22/%3E%3C/svg%3E')]" />
 
-        <section className="min-w-0 flex-1 lg:pl-64">
-          <TopBar view={view} setView={setView} newInvoice={newInvoice} />
-          <div className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-            {view === "dashboard" && (
-              <Dashboard stats={stats} invoices={filteredInvoices.slice(0, 6)} query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} editInvoice={editInvoice} />
-            )}
-            {view === "create" && <CreateInvoice invoice={selectedInvoice} updateInvoice={updateCurrent} saveInvoice={saveInvoice} printInvoice={printInvoice} />}
-            {view === "preview" && <PreviewPage invoice={selectedInvoice} saveInvoice={saveInvoice} printInvoice={printInvoice} />}
-            {view === "history" && (
-              <History invoices={filteredInvoices} query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} editInvoice={editInvoice} confirmDelete={setConfirmDelete} />
-            )}
-            {view === "settings" && <SettingsPage company={company} setCompany={setCompany} notify={notify} />}
-          </div>
-        </section>
-      </div>
-
-      {toast && (
-        <div className="no-print fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-md bg-ink px-4 py-3 text-sm font-medium text-white shadow-premium">
-          <Check size={16} className="text-gold" />
-          {toast}
+      <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
+        <a className="flex items-center gap-2.5" href="#top" aria-label="Droply home">
+          <span className="grid h-10 w-10 -rotate-3 place-items-center rounded-xl border-2 border-black bg-[#d8ff65] shadow-[3px_3px_0_#171717]">
+            <ArrowDownToLine size={21} strokeWidth={2.8} />
+          </span>
+          <span className="text-xl font-black tracking-[-0.06em]">droply!</span>
+        </a>
+        <div className="hidden items-center gap-7 text-sm font-bold sm:flex">
+          <a href="#how" className="transition hover:-translate-y-0.5">How it works</a>
+          <a href="#support" className="transition hover:-translate-y-0.5">Supported</a>
+          <button onClick={() => setPrivateOpen(true)} className="flex items-center gap-1.5 rounded-full border-2 border-black bg-white px-3 py-1.5 text-xs shadow-[2px_2px_0_#171717]"><LockKeyhole size={13} /> Private access</button>
         </div>
-      )}
+      </nav>
 
-      {confirmDelete && (
-        <div className="no-print fixed inset-0 z-50 grid place-items-center bg-black/45 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-premium">
-            <h2 className="text-lg font-semibold text-ink">Delete invoice?</h2>
-            <p className="mt-2 text-sm text-graphite">This will remove {confirmDelete.invoiceNumber} from local history on this browser.</p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button className="rounded-md border border-black/10 px-4 py-2 text-sm font-medium" onClick={() => setConfirmDelete(null)}>
-                Cancel
-              </button>
-              <button className="rounded-md bg-ink px-4 py-2 text-sm font-medium text-white" onClick={deleteInvoice}>
-                Delete
-              </button>
+      <section id="top" className="relative mx-auto max-w-7xl px-5 pb-20 pt-10 sm:px-8 sm:pt-16 lg:pt-20">
+        <div className="absolute -left-28 top-24 h-64 w-64 rounded-full bg-[#ff9acb] blur-[1px]" />
+        <div className="absolute -right-28 top-6 h-72 w-72 rounded-full bg-[#91b5ff]" />
+        <div className="absolute right-[11%] top-24 hidden rotate-12 rounded-full border-2 border-black bg-[#ffdf67] px-4 py-2 text-xs font-black shadow-[3px_3px_0_#171717] lg:block">ZERO WATERMARK*</div>
+
+        <div className="relative z-10 mx-auto max-w-4xl text-center">
+          <div className="mb-5 inline-flex -rotate-1 items-center gap-2 rounded-full border-2 border-black bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.16em] shadow-[3px_3px_0_#171717]">
+            <Sparkles size={14} fill="#ffdf67" /> Your links. Your files.
+          </div>
+          <h1 className="text-[clamp(3.25rem,9vw,7.6rem)] font-black leading-[0.84] tracking-[-0.085em]">
+            Save the <span className="relative inline-block text-[#6147ff]">good stuff<span className="absolute -bottom-1 left-1 right-0 h-3 -rotate-1 rounded-full bg-[#d8ff65] -z-10" /></span>.
+          </h1>
+          <p className="mx-auto mt-7 max-w-xl text-base font-semibold leading-relaxed text-black/65 sm:text-lg">
+            Paste a public post. Grab the video, image or audio. No sketchy pop-ups, no account, no drama.
+          </p>
+
+          <form onSubmit={inspect} className="mx-auto mt-9 max-w-3xl rounded-[28px] border-2 border-black bg-white p-3 shadow-[8px_8px_0_#171717] sm:flex sm:items-center sm:gap-3 sm:p-4">
+            <div className="flex min-w-0 flex-1 items-center gap-3 px-2">
+              <Link2 className="shrink-0 text-[#6147ff]" size={22} />
+              <input
+                value={url}
+                onChange={(event) => { setUrl(event.target.value); setInfo(null); setStatus("idle"); }}
+                className="h-12 min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-black/35 sm:text-base"
+                placeholder="Paste TikTok, IG, Facebook or Telegram link..."
+                type="url"
+                required
+                aria-label="Post URL"
+              />
+              {url ? <button type="button" onClick={() => { setUrl(""); setInfo(null); }} aria-label="Clear link" className="rounded-full p-1 hover:bg-black/5"><X size={18} /></button> : null}
+              <button type="button" onClick={pasteLink} className="hidden items-center gap-1.5 rounded-xl bg-black/5 px-3 py-2 text-xs font-black hover:bg-black/10 sm:flex"><Clipboard size={14} /> Paste</button>
             </div>
+            <button disabled={status === "fetching" || !url} className="mt-2 flex h-13 w-full items-center justify-center gap-2 rounded-2xl border-2 border-black bg-[#d8ff65] px-6 py-3.5 text-sm font-black shadow-[3px_3px_0_#171717] transition hover:-translate-y-0.5 hover:shadow-[5px_5px_0_#171717] disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0 sm:w-auto">
+              {status === "fetching" ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} fill="currentColor" />} Get media
+            </button>
+          </form>
+
+          <div id="support" className="mt-7 flex flex-wrap justify-center gap-2.5">
+            {platforms.map(({ name, icon: Icon, color }) => (
+              <span key={name} className={`flex items-center gap-2 rounded-full border-2 border-black px-3 py-1.5 text-xs font-black ${color}`}><Icon size={14} />{name}</span>
+            ))}
+            <button type="button" onClick={() => setPrivateOpen(true)} className={`flex items-center gap-2 rounded-full border-2 border-black px-3 py-1.5 text-xs font-black ${browser !== "none" || telegram.stage === "ready" ? "bg-[#d8ff65]" : "bg-white"}`}><LockKeyhole size={14} />{browser !== "none" || telegram.stage === "ready" ? "Private access on" : "Use private access"}</button>
+          </div>
+        </div>
+
+        {(message || info) && (
+          <div className="relative z-10 mx-auto mt-10 max-w-3xl">
+            {message ? (
+              <div className="flex items-start gap-3 rounded-2xl border-2 border-black bg-[#ffb8ad] p-4 text-left font-bold shadow-[5px_5px_0_#171717]"><X className="mt-0.5 shrink-0" size={19} /><p>{message}</p></div>
+            ) : info ? (
+              <div className="overflow-hidden rounded-[28px] border-2 border-black bg-white text-left shadow-[8px_8px_0_#171717]">
+                <div className="grid sm:grid-cols-[220px_1fr]">
+                  <div className="relative min-h-44 overflow-hidden bg-[#e7e0ff]">
+                    {info.thumbnail ? <img src={info.thumbnail} alt="Post preview" className="absolute inset-0 h-full w-full object-cover" /> : <div className="grid h-full min-h-44 place-items-center"><Film size={44} /></div>}
+                    <span className="absolute bottom-3 left-3 rounded-full border border-black bg-white px-2.5 py-1 text-[11px] font-black">{formatDuration(info.duration)}</span>
+                  </div>
+                  <div className="p-5 sm:p-6">
+                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#6147ff]"><Check size={15} strokeWidth={3} /> Ready to save</div>
+                    <h2 className="mt-2 line-clamp-2 text-xl font-black leading-tight tracking-tight">{info.title}</h2>
+                    <p className="mt-1 text-sm font-semibold text-black/50">{info.uploader || hostname} · {info.platform}{info.itemCount && info.itemCount > 1 ? ` · ${info.itemCount} items · downloads as ZIP` : ""}</p>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                      <label className="relative"><span className="sr-only">File type</span><select value={mode} onChange={(e) => setMode(e.target.value as "video" | "audio")} className="h-12 w-full appearance-none rounded-xl border-2 border-black bg-[#f7f3e8] px-3 pr-8 text-sm font-black outline-none"><option value="video">Video / image</option><option value="audio">Audio only</option></select><ChevronDown className="pointer-events-none absolute right-3 top-4" size={16} /></label>
+                      <label className="relative"><span className="sr-only">Quality</span><select value={quality} onChange={(e) => setQuality(e.target.value)} className="h-12 w-full appearance-none rounded-xl border-2 border-black bg-[#f7f3e8] px-3 pr-8 text-sm font-black outline-none"><option value="best">Best quality</option><option value="1080">Up to 1080p</option><option value="720">Up to 720p</option><option value="480">Up to 480p</option></select><ChevronDown className="pointer-events-none absolute right-3 top-4" size={16} /></label>
+                      <button onClick={downloadMedia} disabled={status === "downloading"} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-black bg-[#6147ff] px-5 text-sm font-black text-white shadow-[3px_3px_0_#171717] transition hover:-translate-y-0.5 disabled:opacity-60">{status === "downloading" ? <Loader2 className="animate-spin" size={18} /> : status === "done" ? <Check size={18} /> : <Download size={18} />}{status === "downloading" ? "Saving..." : status === "done" ? "Saved!" : "Download"}</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </section>
+
+      <section id="how" className="relative border-y-2 border-black bg-[#171717] px-5 py-18 text-white sm:px-8 sm:py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div><p className="text-xs font-black uppercase tracking-[0.2em] text-[#d8ff65]">Ridiculously easy</p><h2 className="mt-2 text-4xl font-black tracking-[-0.055em] sm:text-6xl">Paste. Pick. Poof.</h2></div>
+            <p className="max-w-sm text-sm font-semibold leading-relaxed text-white/55">Everything runs from this computer. Your links are not stored in a cloud account.</p>
+          </div>
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {[
+              ["01", Link2, "Drop the link", "Copy a public post URL from your favourite social app."],
+              ["02", Play, "Choose your vibe", "Keep the best video, a smaller version, or just the audio."],
+              ["03", ArrowDownToLine, "Save it locally", "The file lands straight in your Downloads folder."]
+            ].map(([number, Icon, title, body], index) => {
+              const Component = Icon as typeof Link2;
+              return <article key={String(number)} className={`rounded-3xl border-2 border-white/25 p-6 ${index === 1 ? "md:-rotate-1 bg-[#6147ff]" : "bg-white/5"}`}><div className="flex items-center justify-between"><span className="text-xs font-black text-[#d8ff65]">{String(number)}</span><Component size={23} /></div><h3 className="mt-12 text-xl font-black">{String(title)}</h3><p className="mt-2 text-sm font-medium leading-relaxed text-white/60">{String(body)}</p></article>;
+            })}
+          </div>
+        </div>
+      </section>
+
+      <footer className="bg-[#f7f3e8] px-5 py-9 sm:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 text-sm font-bold sm:flex-row sm:items-center sm:justify-between">
+          <span className="flex items-center gap-2"><ShieldCheck size={17} /> Private by default. Made for your own network.</span>
+          <p className="max-w-xl text-xs font-semibold leading-relaxed text-black/50 sm:text-right">Only download media you own or have permission to save. Private, protected and DRM content is not supported. *Watermark removal depends on the source provided by the platform.</p>
+        </div>
+      </footer>
+
+      {privateOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/55 p-4" role="dialog" aria-modal="true" aria-label="Private access settings">
+          <div className="my-auto w-full max-w-2xl overflow-hidden rounded-[28px] border-2 border-black bg-[#f7f3e8] shadow-[9px_9px_0_#171717]">
+            <div className="flex items-start justify-between border-b-2 border-black bg-[#d8ff65] p-5 sm:p-6">
+              <div><div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em]"><ShieldCheck size={16} /> Stays on this PC</div><h2 className="mt-1 text-2xl font-black tracking-tight">Private access</h2></div>
+              <button onClick={() => setPrivateOpen(false)} className="rounded-full border-2 border-black bg-white p-2 shadow-[2px_2px_0_#171717]" aria-label="Close"><X size={18} /></button>
+            </div>
+            <div className="grid gap-4 p-5 sm:p-6 md:grid-cols-2">
+              <section className="rounded-2xl border-2 border-black bg-white p-5">
+                <div className="flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#ff9acb]"><Instagram size={18} /></span><div><h3 className="font-black">Social browser login</h3><p className="text-xs font-semibold text-black/50">TikTok · Instagram · Facebook</p></div></div>
+                <p className="mt-4 text-sm font-semibold leading-relaxed text-black/60">Login normally in your browser, open the private post once, then select that browser here.</p>
+                <label className="mt-4 block text-xs font-black uppercase tracking-wider">Logged-in browser</label>
+                <select value={browser} onChange={(event) => setBrowser(event.target.value)} className="mt-2 h-12 w-full rounded-xl border-2 border-black bg-[#f7f3e8] px-3 text-sm font-black outline-none">
+                  <option value="none">Public mode only</option><option value="chrome">Google Chrome</option><option value="edge">Microsoft Edge</option><option value="firefox">Mozilla Firefox</option><option value="brave">Brave</option>
+                </select>
+                {browser !== "none" && <p className="mt-3 flex items-center gap-2 text-xs font-bold text-[#3f7d00]"><Check size={15} /> Browser session enabled</p>}
+              </section>
+
+              <section className="rounded-2xl border-2 border-black bg-white p-5">
+                <div className="flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#a9dcff]"><Send size={18} /></span><div><h3 className="font-black">Telegram channel</h3><p className="text-xs font-semibold text-black/50">Official user-session login</p></div></div>
+                {telegram.stage === "ready" ? (
+                  <div className="mt-5 rounded-xl border-2 border-black bg-[#d8ff65] p-4"><p className="text-xs font-black uppercase tracking-wider">Connected locally</p><p className="mt-1 font-black">{telegram.name || "Telegram account"}</p><p className="mt-2 text-xs font-semibold text-black/55">You can now paste direct message links from channels this account has joined.</p></div>
+                ) : telegram.stage === "code" || telegram.stage === "password" ? (
+                  <form onSubmit={submitTelegram} className="mt-5"><label className="text-xs font-black uppercase tracking-wider">{telegram.stage === "code" ? "Telegram login code" : "Two-step verification password"}</label><input autoFocus value={telegramForm.input} onChange={(e) => setTelegramForm({ ...telegramForm, input: e.target.value })} type={telegram.stage === "password" ? "password" : "text"} className="mt-2 h-12 w-full rounded-xl border-2 border-black px-3 font-bold outline-none" required /><button disabled={authBusy} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-[#6147ff] font-black text-white">{authBusy && <Loader2 className="animate-spin" size={16} />} Continue</button></form>
+                ) : (
+                  <form onSubmit={startTelegram} className="mt-4 space-y-3">
+                    <p className="text-xs font-semibold leading-relaxed text-black/55">On this PC, get API ID and hash from <a className="font-black text-[#6147ff] underline" href="https://my.telegram.org" target="_blank" rel="noreferrer">my.telegram.org</a> → API development tools. For safety, connect through localhost—not another network device.</p>
+                    <div className="grid grid-cols-2 gap-2"><input value={telegramForm.apiId} onChange={(e) => setTelegramForm({ ...telegramForm, apiId: e.target.value })} placeholder="API ID" inputMode="numeric" className="h-11 rounded-xl border-2 border-black px-3 text-sm font-bold outline-none" required /><input value={telegramForm.apiHash} onChange={(e) => setTelegramForm({ ...telegramForm, apiHash: e.target.value })} placeholder="API hash" type="password" className="h-11 rounded-xl border-2 border-black px-3 text-sm font-bold outline-none" required /></div>
+                    <input value={telegramForm.phone} onChange={(e) => setTelegramForm({ ...telegramForm, phone: e.target.value })} placeholder="+60123456789" type="tel" className="h-11 w-full rounded-xl border-2 border-black px-3 text-sm font-bold outline-none" required />
+                    <button disabled={authBusy || telegram.stage === "connecting"} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border-2 border-black bg-[#a9dcff] font-black shadow-[2px_2px_0_#171717]">{(authBusy || telegram.stage === "connecting") && <Loader2 className="animate-spin" size={16} />} Send login code</button>
+                  </form>
+                )}
+                {telegram.error && <p className="mt-3 rounded-lg bg-[#ffb8ad] p-2 text-xs font-bold">{telegram.error}</p>}
+              </section>
+            </div>
+            <p className="border-t-2 border-black px-5 py-4 text-center text-[11px] font-semibold text-black/45">Access only works for posts your own account is allowed to view. Droply does not bypass membership, bans, DRM or platform restrictions.</p>
           </div>
         </div>
       )}
     </main>
   );
-}
-
-function BrandBlock() {
-  return (
-    <div className="border-b border-white/10 p-5">
-      <div className="flex items-center gap-3">
-        <div className="grid h-10 w-10 -skew-x-6 place-items-center border border-gold bg-white/5 text-sm font-black text-gold">IA</div>
-        <div>
-          <p className="text-sm font-extrabold uppercase tracking-wide">Izuwan Automobile</p>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">Japan Recond Specialist</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Nav({ view, setView, newInvoice }: { view: View; setView: (view: View) => void; newInvoice: () => void }) {
-  const items = [
-    ["dashboard", Home, "Dashboard"],
-    ["create", Plus, "Create Invoice"],
-    ["preview", FileText, "Invoice Preview"],
-    ["history", Search, "Invoice History"],
-    ["settings", Settings, "Company Settings"]
-  ] as const;
-  return (
-    <nav className="space-y-2 p-4">
-      {items.map(([key, Icon, label]) => (
-        <button
-          key={key}
-          onClick={() => (key === "create" ? newInvoice() : setView(key))}
-          className={clsx(
-            "flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold transition",
-            view === key ? "bg-gold text-white shadow-soft" : "text-white/62 hover:bg-white/10 hover:text-white"
-          )}
-        >
-          <Icon size={18} />
-          {label}
-        </button>
-      ))}
-    </nav>
-  );
-}
-
-function TopBar({ view, setView, newInvoice }: { view: View; setView: (view: View) => void; newInvoice: () => void }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <header className="no-print sticky top-0 z-20 border-b border-black/10 bg-white/90 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-gold">Established 2011 · 100% Bumiputera</p>
-          <h1 className="text-xl font-extrabold text-ink sm:text-2xl">Invoice Generator</h1>
-        </div>
-        <div className="hidden items-center gap-3 md:flex">
-          <button onClick={() => setView("history")} className="border border-black/10 bg-white px-4 py-2 text-sm font-bold text-ink shadow-soft">
-            History
-          </button>
-          <button onClick={newInvoice} className="flex items-center gap-2 bg-gold px-4 py-2 text-sm font-extrabold text-white shadow-soft">
-            <Plus size={16} />
-            New Invoice
-          </button>
-        </div>
-        <button onClick={() => setOpen(!open)} className="grid h-10 w-10 place-items-center rounded-md border border-black/10 md:hidden">
-          {open ? <X size={18} /> : <Menu size={18} />}
-        </button>
-      </div>
-      {open && (
-        <div className="mt-3 rounded-lg border border-black/10 bg-white p-2 shadow-soft md:hidden">
-          <Nav view={view} setView={(next) => { setView(next); setOpen(false); }} newInvoice={() => { newInvoice(); setOpen(false); }} />
-        </div>
-      )}
-    </header>
-  );
-}
-
-function Dashboard({ stats, invoices, query, setQuery, filter, setFilter, editInvoice }: any) {
-  const cards = [
-    ["Total invoices", stats.count, FileText],
-    ["Total invoice value", money(stats.value), BadgeDollarSign],
-    ["Total paid", money(stats.paid), Check],
-    ["Outstanding balance", money(stats.balance), Building2]
-  ];
-  return (
-    <div className="space-y-6">
-      <section className="overflow-hidden border border-black/10 bg-ink p-6 text-white shadow-premium sm:p-8">
-        <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-gold">Invoice command center</p>
-            <h2 className="mt-3 max-w-3xl text-3xl font-black tracking-tight sm:text-4xl">Luxury dealership billing, quick enough for the sales floor.</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">Vehicle sale invoices, accessories, service items, deposits and custom charges in one internal workspace.</p>
-          </div>
-          <div className="grid min-w-[260px] grid-cols-2 gap-3 text-sm">
-            <div className="border border-white/10 bg-white/5 p-4"><span className="text-white/45">Paid</span><b className="mt-1 block text-lg">{money(stats.paid)}</b></div>
-            <div className="border border-white/10 bg-white/5 p-4"><span className="text-white/45">Outstanding</span><b className="mt-1 block text-lg text-gold">{money(stats.balance)}</b></div>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {cards.map(([label, value, Icon]: any) => (
-          <div key={label} className="group border border-black/10 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:shadow-premium">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-graphite">{label}</p>
-              <span className="grid h-10 w-10 place-items-center bg-mist text-gold transition group-hover:bg-ink"><Icon size={19} /></span>
-            </div>
-            <p className="mt-5 text-2xl font-black tracking-tight text-ink">{value}</p>
-          </div>
-        ))}
-      </section>
-      <SearchBar query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} />
-      <InvoiceTable invoices={invoices} editInvoice={editInvoice} />
-    </div>
-  );
-}
-
-function SearchBar({ query, setQuery, filter, setFilter }: any) {
-  return (
-    <div className="no-print flex flex-col gap-3 rounded-lg border border-black/10 bg-white p-4 shadow-soft md:flex-row">
-      <label className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-graphite" size={17} />
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search customer, invoice, vehicle or item" className="h-12 w-full border border-black/10 bg-mist pl-10 pr-3 text-sm font-medium outline-none transition focus:border-gold focus:bg-white" />
-      </label>
-      <select value={filter} onChange={(event) => setFilter(event.target.value)} className="h-12 border border-black/10 bg-mist px-3 text-sm font-bold outline-none transition focus:border-gold focus:bg-white">
-        <option>All</option>
-        {statuses.map((status) => <option key={status}>{status}</option>)}
-      </select>
-    </div>
-  );
-}
-
-function CreateInvoice({ invoice, updateInvoice, saveInvoice, printInvoice }: any) {
-  const invoiceType: InvoiceType = invoice.invoiceType ?? "Vehicle Sale";
-  const isVehicle = invoiceType === "Vehicle Sale";
-  const updateVehicle = (patch: any) => updateInvoice({ vehicle: { ...invoice.vehicle, ...patch } });
-  const vehicleLineName = (vehicle = invoice.vehicle) => [vehicle.year, vehicle.make, vehicle.model, vehicle.variant].filter(Boolean).join(" ") || "Vehicle selling price";
-  const updateVehicleWithLineItem = (patch: any) => {
-    const vehicle = { ...invoice.vehicle, ...patch };
-    const existingItems = invoice.items.length ? invoice.items : [{ id: crypto.randomUUID(), description: "Vehicle selling price", quantity: 1, unitPrice: 0 }];
-    const items = [
-      {
-        ...existingItems[0],
-        description: vehicleLineName(vehicle),
-        quantity: 1,
-        unitPrice: Number(vehicle.sellingPrice) || 0
-      },
-      ...existingItems.slice(1)
-    ];
-    updateInvoice({ vehicle, items });
-  };
-  const updateCustomer = (patch: any) => updateInvoice({ customer: { ...invoice.customer, ...patch } });
-  const updatePayment = (patch: any) => updateInvoice({ payment: { ...invoice.payment, ...patch } });
-  const syncItems = () => {
-    const vehicleName = vehicleLineName();
-    const items: InvoiceItem[] = [
-      { id: invoice.items[0]?.id ?? crypto.randomUUID(), description: vehicleName, quantity: 1, unitPrice: Number(invoice.vehicle.sellingPrice) || 0 },
-      ...(Number(invoice.payment.insurance) > 0 ? [{ id: invoice.items[1]?.id ?? crypto.randomUUID(), description: "Insurance", quantity: 1, unitPrice: Number(invoice.payment.insurance) }] : []),
-      ...(Number(invoice.payment.roadTax) > 0 ? [{ id: crypto.randomUUID(), description: "Road tax", quantity: 1, unitPrice: Number(invoice.payment.roadTax) }] : []),
-      ...(Number(invoice.payment.jpjFee) > 0 ? [{ id: crypto.randomUUID(), description: "JPJ / registration", quantity: 1, unitPrice: Number(invoice.payment.jpjFee) }] : []),
-      ...(Number(invoice.payment.processingFee) > 0 ? [{ id: crypto.randomUUID(), description: "Processing fee", quantity: 1, unitPrice: Number(invoice.payment.processingFee) }] : [])
-    ];
-    updateInvoice({ items });
-  };
-
-  return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,0.88fr)_minmax(460px,0.72fr)]">
-      <div className="no-print space-y-4">
-        <section className="border border-black/10 bg-ink p-5 text-white shadow-soft">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-gold">Invoice workspace</p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight">Create a polished invoice.</h2>
-          <p className="mt-2 max-w-2xl text-sm text-white/62">Pilih vehicle sale untuk kereta, atau custom invoice untuk accessories, service, parts, booking, admin charges dan barang lain.</p>
-        </section>
-
-        <FormCard title="Invoice">
-          <SegmentedControl value={invoiceType} options={invoiceTypes} onChange={(value) => updateInvoice({ invoiceType: value })} />
-          <div className="grid gap-3 md:grid-cols-4">
-            <Field label="Invoice no." value={invoice.invoiceNumber} onChange={(value) => updateInvoice({ invoiceNumber: value })} />
-            <Field label="Date" type="date" value={invoice.invoiceDate} onChange={(value) => updateInvoice({ invoiceDate: value })} />
-            <Field label="Due" type="date" value={invoice.dueDate} onChange={(value) => updateInvoice({ dueDate: value })} />
-            <SelectField label="Status" value={invoice.status} options={statuses} onChange={(value) => updateInvoice({ status: value })} />
-          </div>
-        </FormCard>
-
-        <FormCard title="Customer / Buyer">
-          <div className="grid gap-3 md:grid-cols-2">
-            <Field label="Name" value={invoice.customer.fullName} onChange={(value) => updateCustomer({ fullName: value })} />
-            <Field label="Phone" value={invoice.customer.phone} onChange={(value) => updateCustomer({ phone: value })} />
-          </div>
-          <details className="advanced-panel">
-            <summary>More customer details <span>+</span></summary>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              <Field label="IC / Passport" value={invoice.customer.idNumber} onChange={(value) => updateCustomer({ idNumber: value })} />
-              <Field label="Email" value={invoice.customer.email} onChange={(value) => updateCustomer({ email: value })} />
-              <Field label="Address" value={invoice.customer.address} onChange={(value) => updateCustomer({ address: value })} />
-            </div>
-          </details>
-        </FormCard>
-
-        {isVehicle ? (
-          <FormCard title="Vehicle Details">
-            <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Make" value={invoice.vehicle.make} onChange={(value) => updateVehicleWithLineItem({ make: value })} />
-              <Field label="Model" value={invoice.vehicle.model} onChange={(value) => updateVehicleWithLineItem({ model: value })} />
-              <Field label="Variant" value={invoice.vehicle.variant} onChange={(value) => updateVehicleWithLineItem({ variant: value })} />
-              <Field label="Selling price" type="number" value={invoice.vehicle.sellingPrice} onChange={(value) => updateVehicleWithLineItem({ sellingPrice: Number(value) })} />
-            </div>
-            <details className="advanced-panel">
-              <summary>More vehicle details <span>+</span></summary>
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <Field label="Year" value={invoice.vehicle.year} onChange={(value) => updateVehicleWithLineItem({ year: value })} />
-                <Field label="Colour" value={invoice.vehicle.colour} onChange={(value) => updateVehicle({ colour: value })} />
-                <Field label="Mileage" value={invoice.vehicle.mileage} onChange={(value) => updateVehicle({ mileage: value })} />
-                <Field label="Chassis no." value={invoice.vehicle.chassisNumber} onChange={(value) => updateVehicle({ chassisNumber: value })} />
-                <Field label="Engine no." value={invoice.vehicle.engineNumber} onChange={(value) => updateVehicle({ engineNumber: value })} />
-                <Field label="Registration no." value={invoice.vehicle.registrationNumber} onChange={(value) => updateVehicle({ registrationNumber: value })} />
-              </div>
-            </details>
-          </FormCard>
-        ) : (
-          <FormCard title="Items / Services">
-            <p className="text-sm leading-6 text-graphite">Use this for accessories, service work, spare parts, admin fees, detailing, transport, booking or any custom billing.</p>
-            <ItemsForm invoice={invoice} updateInvoice={updateInvoice} />
-          </FormCard>
-        )}
-
-        <FormCard title="Payment Summary">
-          {isVehicle ? (
-            <div className="grid gap-3 md:grid-cols-3">
-              <Field label="Booking fee" type="number" value={invoice.payment.bookingFee} onChange={(value) => updatePayment({ bookingFee: Number(value) })} />
-              <Field label="Deposit" type="number" value={invoice.payment.deposit} onChange={(value) => updatePayment({ deposit: Number(value) })} />
-              <Field label="Loan amount" type="number" value={invoice.payment.loanAmount} onChange={(value) => updatePayment({ loanAmount: Number(value) })} />
-              <Field label="Discount" type="number" value={invoice.payment.discount} onChange={(value) => updatePayment({ discount: Number(value) })} />
-              <Field label="Trade-in" type="number" value={invoice.payment.tradeInValue} onChange={(value) => updatePayment({ tradeInValue: Number(value) })} />
-              <Field label="Amount paid" type="number" value={invoice.payment.amountPaid} onChange={(value) => updatePayment({ amountPaid: Number(value) })} />
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-3">
-              <Field label="Deposit / advance" type="number" value={invoice.payment.deposit} onChange={(value) => updatePayment({ deposit: Number(value), bookingFee: 0, loanAmount: 0, tradeInValue: 0 })} />
-              <Field label="Discount" type="number" value={invoice.payment.discount} onChange={(value) => updatePayment({ discount: Number(value) })} />
-              <Field label="Amount paid" type="number" value={invoice.payment.amountPaid} onChange={(value) => updatePayment({ amountPaid: Number(value), loanAmount: 0 })} />
-            </div>
-          )}
-          <details className="advanced-panel" open={!isVehicle}>
-            <summary>Extra charges, tax and line items <span>+</span></summary>
-            <PaymentForm invoice={invoice} updateInvoice={updateInvoice} />
-            <div className="mt-3">
-              {isVehicle && <button className="border border-black/10 px-4 py-2 text-sm font-bold" onClick={syncItems}>Sync line items from car/payment</button>}
-            </div>
-            {isVehicle && <ItemsForm invoice={invoice} updateInvoice={updateInvoice} />}
-          </details>
-        </FormCard>
-
-        <FormCard title="Notes">
-          <TextArea label="Customer note" value={invoice.notes} onChange={(value) => updateInvoice({ notes: value })} />
-          <details className="advanced-panel">
-            <summary>Terms & conditions <span>+</span></summary>
-            <div className="mt-3">
-              <TextArea label="Terms" value={invoice.terms} onChange={(value) => updateInvoice({ terms: value })} />
-            </div>
-          </details>
-        </FormCard>
-      </div>
-      <div className="space-y-4">
-        <ActionBar saveInvoice={saveInvoice} printInvoice={printInvoice} />
-        <InvoicePreview invoice={invoice} compact />
-      </div>
-    </div>
-  );
-}
-
-function PaymentForm({ invoice, updateInvoice }: any) {
-  const fields = [
-    ["processingFee", "Processing Fee"], ["roadTax", "Road Tax"], ["insurance", "Insurance"], ["jpjFee", "JPJ / Registration Fee"], ["otherCharges", "Other Charges"]
-  ];
-  return (
-    <div className="mt-3 border-t border-black/10 pt-3">
-      <div className="grid gap-3 md:grid-cols-3">
-        {fields.map(([key, label]) => <Field key={key} label={label} type="number" value={invoice.payment[key]} onChange={(value) => updateInvoice({ payment: { ...invoice.payment, [key]: Number(value) } })} />)}
-      </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        <label className="flex h-11 items-center gap-3 rounded-md border border-black/10 bg-mist px-3 text-sm">
-          <input type="checkbox" checked={invoice.payment.sstEnabled} onChange={(event) => updateInvoice({ payment: { ...invoice.payment, sstEnabled: event.target.checked } })} />
-          Enable SST / Tax
-        </label>
-        <Field label="SST rate (%)" type="number" value={invoice.payment.sstRate} onChange={(value) => updateInvoice({ payment: { ...invoice.payment, sstRate: Number(value) } })} />
-      </div>
-    </div>
-  );
-}
-
-function ItemsForm({ invoice, updateInvoice }: any) {
-  const updateItem = (id: string, patch: Partial<InvoiceItem>) => {
-    updateInvoice({ items: invoice.items.map((item: InvoiceItem) => (item.id === id ? { ...item, ...patch } : item)) });
-  };
-  return (
-    <div className="mt-4 border-t border-black/10 pt-4">
-      <h3 className="mb-3 text-sm font-black uppercase tracking-[0.14em] text-ink">Line items</h3>
-      <div className="space-y-3">
-        {invoice.items.map((item: InvoiceItem) => (
-          <div key={item.id} className="grid gap-2 border border-black/10 bg-mist p-3 md:grid-cols-[1fr_90px_130px_42px]">
-            <input value={item.description} onChange={(event) => updateItem(item.id, { description: event.target.value })} placeholder="Description" className="h-10 border border-black/10 bg-white px-3 text-sm outline-none focus:border-gold" />
-            <input type="number" value={item.quantity} onChange={(event) => updateItem(item.id, { quantity: Number(event.target.value) })} className="h-10 border border-black/10 bg-white px-3 text-sm outline-none focus:border-gold" />
-            <input type="number" value={item.unitPrice} onChange={(event) => updateItem(item.id, { unitPrice: Number(event.target.value) })} className="h-10 border border-black/10 bg-white px-3 text-sm outline-none focus:border-gold" />
-            <button className="grid h-10 place-items-center border border-black/10 bg-white" onClick={() => updateInvoice({ items: invoice.items.filter((next: InvoiceItem) => next.id !== item.id) })} aria-label="Remove item">
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ))}
-      </div>
-      <button className="mt-2 flex items-center gap-2 border border-black/10 px-4 py-2 text-sm font-bold" onClick={() => updateInvoice({ items: [...invoice.items, { id: crypto.randomUUID(), description: "", quantity: 1, unitPrice: 0 }] })}>
-        <Plus size={16} />
-        Add charge
-      </button>
-    </div>
-  );
-}
-
-function ActionBar({ saveInvoice, printInvoice }: any) {
-  return (
-    <div className="no-print sticky top-[78px] z-10 flex flex-wrap justify-end gap-3 border border-black/10 bg-white/92 p-3 shadow-soft backdrop-blur">
-      <button onClick={saveInvoice} className="flex items-center gap-2 border border-black/10 px-4 py-2 text-sm font-bold">
-        <Save size={16} />
-        Save
-      </button>
-      <button onClick={printInvoice} className="flex items-center gap-2 bg-gold px-4 py-2 text-sm font-extrabold text-white">
-        <Download size={16} />
-        Export PDF / Print
-      </button>
-    </div>
-  );
-}
-
-function PreviewPage({ invoice, saveInvoice, printInvoice }: any) {
-  return (
-    <div className="space-y-4">
-      <ActionBar saveInvoice={saveInvoice} printInvoice={printInvoice} />
-      <InvoicePreview invoice={invoice} />
-    </div>
-  );
-}
-
-function InvoicePreview({ invoice, compact = false }: { invoice: Invoice; compact?: boolean }) {
-  const total = calculateInvoice(invoice);
-  const invoiceType = invoice.invoiceType ?? "Vehicle Sale";
-  const isVehicle = invoiceType === "Vehicle Sale";
-  return (
-    <article className={clsx("print-area mx-auto bg-white text-ink shadow-premium", compact ? "border border-black/10 p-6" : "min-h-[297mm] w-full max-w-[210mm] p-8")}>
-      <header className="flex flex-col justify-between gap-6 border-b-4 border-ink pb-6 sm:flex-row">
-        <div className="flex gap-4">
-          <div className="grid h-16 w-16 shrink-0 -skew-x-6 place-items-center border border-gold bg-ink text-lg font-black text-gold">IA</div>
-          <div>
-            <h2 className="text-xl font-black tracking-tight">{invoice.company.name}</h2>
-            <p className="mt-1 text-xs text-graphite">{invoice.company.registrationNumber}</p>
-            <p className="mt-2 max-w-sm text-sm text-graphite">{invoice.company.address}</p>
-            <p className="mt-2 text-sm text-graphite">{invoice.company.phone} / {invoice.company.email}</p>
-            <p className="text-sm text-graphite">{invoice.company.website}</p>
-          </div>
-        </div>
-        <div className="text-left sm:text-right">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-gold">{invoiceType}</p>
-          <p className="mt-2 text-3xl font-black tracking-tight">{invoice.invoiceNumber}</p>
-          <StatusBadge status={invoice.status} />
-          <p className="mt-4 text-sm text-graphite">Date: {invoice.invoiceDate || "-"}</p>
-          <p className="text-sm text-graphite">Due: {invoice.dueDate || "-"}</p>
-        </div>
-      </header>
-
-      <section className={clsx("grid gap-5 border-b border-black/10 py-6", isVehicle && "md:grid-cols-2")}>
-        <InfoBlock title="Customer Details" rows={[["Name", invoice.customer.fullName], ["IC / Passport", invoice.customer.idNumber], ["Phone", invoice.customer.phone], ["Email", invoice.customer.email], ["Address", invoice.customer.address]]} />
-        {isVehicle && <InfoBlock title="Vehicle Details" rows={[["Vehicle", `${invoice.vehicle.year} ${invoice.vehicle.make} ${invoice.vehicle.model}`], ["Variant", invoice.vehicle.variant], ["Colour", invoice.vehicle.colour], ["Chassis No.", invoice.vehicle.chassisNumber], ["Engine No.", invoice.vehicle.engineNumber], ["Registration", invoice.vehicle.registrationNumber], ["Mileage", invoice.vehicle.mileage]]} />}
-      </section>
-
-      <section className="py-6">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-graphite">Itemized Charges</h3>
-        <div className="mt-3 overflow-hidden border border-black/10">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-ink text-white">
-              <tr>
-                <th className="p-3 text-left font-medium">Description</th>
-                <th className="p-3 text-right font-medium">Qty</th>
-                <th className="p-3 text-right font-medium">Unit Price</th>
-                <th className="p-3 text-right font-medium">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoice.items.map((item) => (
-                <tr key={item.id} className="border-t border-black/10">
-                  <td className="p-3">{item.description || "-"}</td>
-                  <td className="p-3 text-right">{item.quantity}</td>
-                  <td className="p-3 text-right">{money(item.unitPrice)}</td>
-                  <td className="p-3 text-right font-medium">{money(item.quantity * item.unitPrice)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="grid gap-5 md:grid-cols-[1fr_330px]">
-        <div className="space-y-4">
-          <InfoBlock title="Payment Details" rows={[["Booking Fee", money(invoice.payment.bookingFee)], ["Deposit", money(invoice.payment.deposit)], ["Loan Amount", money(invoice.payment.loanAmount)], ["Trade-in Value", money(invoice.payment.tradeInValue)], ["Amount Paid", money(total.paid)]]} />
-          <div className="border border-black/10 bg-white p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-graphite">Bank Details</h3>
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="grid grid-cols-[120px_1fr] gap-3">
-                <dt className="text-graphite">Bank</dt>
-                <dd className="font-semibold">{invoice.company.bankName || "-"}</dd>
-              </div>
-              <div className="grid grid-cols-[120px_1fr] gap-3">
-                <dt className="text-graphite">Account No.</dt>
-                <dd className="font-semibold">{invoice.company.bankAccount || "-"}</dd>
-              </div>
-              <div className="grid grid-cols-[120px_1fr] gap-3">
-                <dt className="text-graphite">Reference</dt>
-                <dd className="font-semibold">{invoice.company.paymentReference || invoice.invoiceNumber}</dd>
-              </div>
-            </dl>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-graphite">Notes</h3>
-            <p className="mt-2 text-sm leading-6 text-graphite">{invoice.notes}</p>
-          </div>
-        </div>
-        <div className="border border-black/10 bg-mist p-5">
-          <SummaryRow label="Subtotal" value={money(total.itemSubtotal)} />
-          <SummaryRow label="Charges" value={money(total.paymentCharges)} />
-          <SummaryRow label="Discount" value={`-${money(invoice.payment.discount)}`} />
-          <SummaryRow label="SST / Tax" value={money(total.sst)} />
-          <SummaryRow label="Total Payable" value={money(total.totalPayable)} strong />
-          <SummaryRow label="Amount Paid" value={money(total.paid + invoice.payment.loanAmount)} />
-          <div className="mt-4 border-t border-black/10 pt-4">
-            <SummaryRow label="Balance Due" value={money(total.balance)} strong gold />
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-8 grid gap-6 border-t border-black/10 pt-6 md:grid-cols-2">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-graphite">Terms & Conditions</h3>
-          <p className="mt-2 text-sm leading-6 text-graphite">{invoice.terms}</p>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="grid min-h-32 place-items-center rounded-md border border-dashed border-black/20 text-center text-xs text-graphite">Company stamp</div>
-          <div className="flex min-h-32 flex-col justify-end rounded-md border border-black/10 p-4">
-            <div className="border-t border-black/30 pt-3 text-center text-xs font-medium text-graphite">Authorised Signature</div>
-          </div>
-        </div>
-      </section>
-    </article>
-  );
-}
-
-function History({ invoices, query, setQuery, filter, setFilter, editInvoice, confirmDelete }: any) {
-  return (
-    <div className="space-y-5">
-      <SearchBar query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} />
-      <InvoiceTable invoices={invoices} editInvoice={editInvoice} confirmDelete={confirmDelete} />
-    </div>
-  );
-}
-
-function InvoiceTable({ invoices, editInvoice, confirmDelete }: any) {
-  if (!invoices.length) {
-    return <div className="border border-dashed border-black/20 bg-white p-12 text-center shadow-soft"><div className="mx-auto grid h-14 w-14 place-items-center bg-mist text-gold"><FileText /></div><h2 className="mt-4 text-xl font-black">No invoices found</h2><p className="mt-2 text-sm text-graphite">Create a vehicle sale invoice or custom invoice to start the history.</p></div>;
-  }
-  return (
-    <div className="overflow-hidden border border-black/10 bg-white shadow-soft">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] text-sm">
-          <thead className="bg-ink text-left text-xs uppercase tracking-[0.14em] text-white/65">
-            <tr><th className="p-4">Invoice</th><th className="p-4">Customer</th><th className="p-4">Type</th><th className="p-4">Details</th><th className="p-4">Status</th><th className="p-4 text-right">Balance</th><th className="p-4 text-right">Actions</th></tr>
-          </thead>
-          <tbody>
-            {invoices.map((invoice: Invoice) => {
-              const total = calculateInvoice(invoice);
-              const invoiceType = invoice.invoiceType ?? "Vehicle Sale";
-              const detail = invoiceType === "Vehicle Sale" ? `${invoice.vehicle.make} ${invoice.vehicle.model}`.trim() : invoice.items[0]?.description;
-              return (
-                <tr key={invoice.id} className="border-t border-black/10 transition hover:bg-mist/70">
-                  <td className="p-4 font-semibold">{invoice.invoiceNumber}<p className="text-xs font-normal text-graphite">{invoice.invoiceDate}</p></td>
-                  <td className="p-4">{invoice.customer.fullName || "Unnamed customer"}<p className="text-xs text-graphite">{invoice.customer.phone}</p></td>
-                  <td className="p-4"><span className="border border-black/10 bg-white px-2 py-1 text-xs font-bold">{invoiceType}</span></td>
-                  <td className="p-4">{detail || "Custom items"}<p className="text-xs text-graphite">{invoiceType === "Vehicle Sale" ? invoice.vehicle.variant : `${invoice.items.length} line item(s)`}</p></td>
-                  <td className="p-4"><StatusBadge status={invoice.status} /></td>
-                  <td className="p-4 text-right font-semibold">{money(total.balance)}</td>
-                  <td className="p-4">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => editInvoice(invoice)} className="grid h-9 w-9 place-items-center rounded-md border border-black/10" aria-label="Edit invoice"><Edit3 size={15} /></button>
-                      {confirmDelete && <button onClick={() => confirmDelete(invoice)} className="grid h-9 w-9 place-items-center rounded-md border border-black/10" aria-label="Delete invoice"><Trash2 size={15} /></button>}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function SettingsPage({ company, setCompany, notify }: any) {
-  const fields = [["name", "Company Name"], ["registrationNumber", "Registration Number"], ["address", "Address"], ["phone", "Phone"], ["email", "Email"], ["website", "Website"], ["bankName", "Bank Name"], ["bankAccount", "Bank Account"], ["paymentReference", "Payment Reference"]];
-  return (
-    <FormCard title="Company Settings">
-      <div className="grid gap-3 md:grid-cols-2">
-        {fields.map(([key, label]) => <Field key={key} label={label} value={company[key]} onChange={(value) => setCompany({ ...company, [key]: value })} />)}
-      </div>
-      <button onClick={() => notify("Company settings saved")} className="mt-4 flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white"><Save size={16} />Save settings</button>
-    </FormCard>
-  );
-}
-
-function FormCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className="border border-black/10 bg-white p-5 shadow-soft sm:p-6"><h2 className="mb-4 text-base font-black uppercase tracking-[0.12em] text-ink">{title}</h2><div className="space-y-3">{children}</div></section>;
-}
-
-function SegmentedControl({ value, options, onChange }: { value: InvoiceType; options: InvoiceType[]; onChange: (value: InvoiceType) => void }) {
-  return (
-    <div className="mb-4 grid gap-2 border border-black/10 bg-mist p-1 sm:grid-cols-2">
-      {options.map((option) => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => onChange(option)}
-          className={clsx(
-            "px-4 py-3 text-sm font-black transition",
-            value === option ? "bg-ink text-white shadow-soft" : "text-graphite hover:bg-white hover:text-ink"
-          )}
-        >
-          {option}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Field({ label, value, onChange, type = "text" }: { label: string; value: string | number; onChange: (value: string) => void; type?: string }) {
-  const id = useId();
-  return <div className="block"><label htmlFor={id} className="mb-1.5 block text-[11px] font-black uppercase tracking-[0.12em] text-graphite">{label}</label><input id={id} type={type} value={value ?? ""} onChange={(event) => onChange(event.target.value)} className="h-12 w-full border border-black/10 bg-mist px-3 text-sm font-semibold outline-none transition focus:border-gold focus:bg-white" /></div>;
-}
-
-function SelectField({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
-  const id = useId();
-  return <div className="block"><label htmlFor={id} className="mb-1.5 block text-[11px] font-black uppercase tracking-[0.12em] text-graphite">{label}</label><select id={id} value={value} onChange={(event) => onChange(event.target.value)} className="h-12 w-full border border-black/10 bg-mist px-3 text-sm font-semibold outline-none transition focus:border-gold focus:bg-white">{options.map((option: string) => <option key={option}>{option}</option>)}</select></div>;
-}
-
-function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  const id = useId();
-  return <div className="block"><label htmlFor={id} className="mb-1.5 block text-[11px] font-black uppercase tracking-[0.12em] text-graphite">{label}</label><textarea id={id} value={value ?? ""} onChange={(event) => onChange(event.target.value)} rows={4} className="w-full border border-black/10 bg-mist px-3 py-3 text-sm font-medium outline-none transition focus:border-gold focus:bg-white" /></div>;
-}
-
-function GridFields({ data, update, fields }: any) {
-  return <div className="grid gap-3 md:grid-cols-2">{fields.map(([key, label, type]: any) => <Field key={key} label={label} type={type} value={data[key]} onChange={(value: string) => update({ ...data, [key]: type === "number" ? Number(value) : value })} />)}</div>;
-}
-
-function InfoBlock({ title, rows }: { title: string; rows: [string, string][] }) {
-  return <div><h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-graphite">{title}</h3><dl className="mt-3 space-y-2">{rows.map(([label, value]) => <div key={label} className="grid grid-cols-[120px_1fr] gap-3 text-sm"><dt className="text-graphite">{label}</dt><dd className="font-medium">{value || "-"}</dd></div>)}</dl></div>;
-}
-
-function SummaryRow({ label, value, strong = false, gold = false }: any) {
-  return <div className={clsx("flex justify-between gap-4 py-1 text-sm", strong && "text-base font-bold", gold && "text-gold")}><span>{label}</span><span>{value}</span></div>;
-}
-
-function StatusBadge({ status }: { status: InvoiceStatus }) {
-  const style = { Draft: "bg-silver text-ink", Pending: "bg-gold/20 text-[#7a5a22]", Paid: "bg-emerald-100 text-emerald-700", Cancelled: "bg-red-100 text-red-700" }[status];
-  return <span className={clsx("inline-flex rounded-full px-3 py-1 text-xs font-semibold", style)}>{status}</span>;
 }

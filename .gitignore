@@ -6,3 +6,7 @@ desktop.ini
 node_modules/
 .env
 .env.*
+.droply/
+droply-sites/
+tools/*.exe
+droply/dist/
