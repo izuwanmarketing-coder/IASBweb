@@ -52,8 +52,8 @@ The Supabase publishable key is safe to be public. Do not commit private service
 ## Google Sheet inventory sync
 
 The public inventory is refreshed automatically from the `MAIN IASB ` tab in
-the configured Google Sheet through `functions/api/inventory-sheet.js`. The
-Cloudflare Pages Function keeps cost, duty, profit and internal note columns
+the configured Google Sheet through `_worker.js`. The Cloudflare Pages Worker
+keeps cost, duty, profit and internal note columns
 server-side, while the browser receives only public stock fields. Responses are
 cached at the edge for up to five minutes and fall back to Supabase if Google
 Sheets is unavailable.

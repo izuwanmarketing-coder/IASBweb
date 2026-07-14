@@ -46,7 +46,7 @@ function safeInventoryCsv(source) {
   if (headerIndex < 0) throw new Error("Inventory header not found");
 
   // Keep operational inventory P:AD plus public grade AQ. Cost, duty, profit,
-  // purchase rate and internal notes never leave the server-side function.
+  // purchase rate and internal notes never leave the server-side worker.
   return rows.slice(headerIndex).map(row => {
     const safeRow = Array(43).fill("");
     for (let index = 15; index <= 29; index++) safeRow[index] = row[index] || "";
@@ -55,7 +55,7 @@ function safeInventoryCsv(source) {
   }).join("\r\n");
 }
 
-export async function onRequestGet({ env }) {
+async function inventoryResponse(env) {
   const sheetId = env.INVENTORY_SHEET_ID || DEFAULT_SHEET_ID;
   const sheetName = env.INVENTORY_SHEET_NAME || DEFAULT_SHEET_NAME;
   const sourceUrl = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
@@ -63,13 +63,10 @@ export async function onRequestGet({ env }) {
     headers: { Accept: "text/csv" },
     cf: { cacheEverything: true, cacheTtl: 300 }
   });
-  if (!response.ok) {
-    return Response.json({ error: "Inventory source unavailable" }, { status: 502 });
-  }
+  if (!response.ok) return Response.json({ error: "Inventory source unavailable" }, { status: 502 });
 
   try {
-    const csv = safeInventoryCsv(await response.text());
-    return new Response(csv, {
+    return new Response(safeInventoryCsv(await response.text()), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Cache-Control": "public, max-age=60, s-maxage=300",
@@ -81,3 +78,13 @@ export async function onRequestGet({ env }) {
     return Response.json({ error: "Inventory format unavailable" }, { status: 502 });
   }
 }
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    if (url.pathname === "/api/inventory-sheet" && request.method === "GET") {
+      return inventoryResponse(env);
+    }
+    return env.ASSETS.fetch(request);
+  }
+};

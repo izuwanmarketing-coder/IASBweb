@@ -5,6 +5,7 @@ const dist = new URL("./dist/", import.meta.url);
 const files = [
   "_headers",
   "_redirects",
+  "_worker.js",
   "404.html",
   "about.html",
   "admin-overrides.css",
