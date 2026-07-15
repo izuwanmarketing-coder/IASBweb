@@ -939,19 +939,33 @@ function renderPhotoManager(carId = photoManagerCarId) {
   `;
   $("photoManagerGrid").innerHTML = gallery.length ? gallery.map((url, index) => `
     <article class="photo-manager-card ${index === 0 ? "main" : ""}">
-      <img src="${safeText(url)}" alt="Photo ${index + 1}">
-      <div class="photo-manager-meta">
-        <b>${index === 0 ? "Main image" : `Gallery ${index}`}</b>
-        <small>${safeText(url.split("/").pop()?.split("?")[0] || "photo")}</small>
+      <div class="photo-frame">
+        <img src="${safeText(url)}" alt="${safeText(`${car.brand} ${car.model}, gambar ${index + 1}`)}" loading="lazy">
+        <span class="photo-position-badge">${index + 1}</span>
+        ${index === 0 ? '<span class="photo-main-badge">Cover</span>' : ""}
       </div>
-      <div class="photo-manager-actions">
-        <button type="button" data-photo-main="${index}" ${index === 0 ? "disabled" : ""}>Set main</button>
-        <button type="button" data-photo-left="${index}" ${index === 0 ? "disabled" : ""}>Move left</button>
-        <button type="button" data-photo-right="${index}" ${index === gallery.length - 1 ? "disabled" : ""}>Move right</button>
-        <button type="button" class="danger" data-photo-remove="${index}">Remove</button>
+      <div class="photo-card-content">
+        <div class="photo-manager-meta">
+          <b>${index === 0 ? "Main image" : `Gallery image ${index + 1}`}</b>
+          <small title="${safeText(url.split("/").pop()?.split("?")[0] || "photo")}">${safeText(url.split("/").pop()?.split("?")[0] || "photo")}</small>
+        </div>
+        <div class="photo-manager-actions">
+          <button type="button" data-photo-main="${index}" ${index === 0 ? "disabled" : ""} title="Jadikan gambar utama">Cover</button>
+          <button type="button" data-photo-left="${index}" ${index === 0 ? "disabled" : ""} title="Alih ke kiri" aria-label="Alih gambar ${index + 1} ke kiri">←</button>
+          <button type="button" data-photo-right="${index}" ${index === gallery.length - 1 ? "disabled" : ""} title="Alih ke kanan" aria-label="Alih gambar ${index + 1} ke kanan">→</button>
+          <button type="button" class="danger" data-photo-remove="${index}" title="Buang gambar">Delete</button>
+        </div>
       </div>
     </article>
   `).join("") : `<div class="photo-preview-empty">Belum ada gambar untuk stock ini. Upload beberapa gambar untuk mula bina gallery.</div>`;
+}
+
+function updatePhotoManagerSelection() {
+  const files = [...$("photoManagerFiles").files];
+  $("photoManagerFileLabel").textContent = files.length
+    ? `${files.length} gambar dipilih`
+    : "Pilih gambar untuk ditambah";
+  $("photoManagerUploadButton").disabled = !files.length;
 }
 
 async function openPhotoManager(carId) {
@@ -960,6 +974,7 @@ async function openPhotoManager(carId) {
   photoManagerCarId = Number(carId);
   renderPhotoManager(photoManagerCarId);
   $("photoManagerFiles").value = "";
+  updatePhotoManagerSelection();
   $("photoManagerDialog").showModal();
 }
 
@@ -1291,13 +1306,16 @@ $("photoManagerUploadButton").addEventListener("click", async () => {
     renderPhotoManager(car.id);
     renderCarPhotoPreview(findCarById(car.id) || car);
     $("photoManagerFiles").value = "";
+    updatePhotoManagerSelection();
   } catch (error) {
     toast(error.message || "Upload gambar gagal");
   } finally {
-    $("photoManagerUploadButton").disabled = false;
-    $("photoManagerUploadButton").textContent = "Upload selected photos";
+    $("photoManagerUploadButton").textContent = "Upload gambar";
+    updatePhotoManagerSelection();
   }
 });
+
+$("photoManagerFiles").addEventListener("change", updatePhotoManagerSelection);
 
 $("photoManagerGrid").addEventListener("click", async event => {
   const carId = Number($("photoManagerCarId").value || photoManagerCarId);

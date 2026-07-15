@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css?v=20260713-1">
-  <link rel="stylesheet" href="admin-overrides.css?v=20260714-4">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="admin-overrides.css?v=20260715-1">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="manifest" href="site.webmanifest">
@@ -286,19 +286,25 @@
 
   <dialog id="photoManagerDialog" aria-labelledby="photoManagerTitle">
     <div class="dialog-card photo-manager-shell">
-      <div class="card-title">
+      <div class="card-title photo-manager-header">
         <div><span>STOCK PHOTOS</span><h2 id="photoManagerTitle">Photo manager</h2></div>
         <button class="close-dialog" type="button" data-close-dialog="photoManagerDialog">×</button>
       </div>
-      <p class="admin-help" id="photoManagerHint">Upload banyak gambar sekali, pilih main image, susun gallery dan remove gambar yang tak pakai.</p>
-      <input id="photoManagerCarId" type="hidden">
-      <div class="photo-manager-upload">
-        <input id="photoManagerFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple>
-        <button type="button" class="accent-btn" id="photoManagerUploadButton">Upload selected photos</button>
+      <div class="photo-manager-body">
+        <p class="admin-help" id="photoManagerHint">Susun gallery kereta, pilih cover utama dan upload beberapa gambar sekali gus.</p>
+        <input id="photoManagerCarId" type="hidden">
+        <div class="photo-manager-upload">
+          <label class="photo-manager-dropzone" for="photoManagerFiles">
+            <span class="photo-manager-upload-icon" aria-hidden="true">+</span>
+            <span><strong id="photoManagerFileLabel">Pilih gambar untuk ditambah</strong><small>JPG, PNG atau WebP · pilih banyak gambar sekali</small></span>
+          </label>
+          <input class="visually-hidden" id="photoManagerFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+          <button type="button" class="accent-btn" id="photoManagerUploadButton" disabled>Upload gambar</button>
+        </div>
+        <div class="photo-manager-summary" id="photoManagerSummary"></div>
+        <div class="photo-manager-grid" id="photoManagerGrid"></div>
       </div>
-      <div class="photo-manager-summary" id="photoManagerSummary"></div>
-      <div class="photo-manager-grid" id="photoManagerGrid"></div>
-      <div class="dialog-actions"><button type="button" data-close-dialog="photoManagerDialog">Done</button></div>
+      <div class="dialog-actions photo-manager-footer"><span>Perubahan susunan disimpan secara automatik.</span><button type="button" data-close-dialog="photoManagerDialog">Selesai</button></div>
     </div>
   </dialog>
 
@@ -375,7 +381,7 @@
   <script src="config.js?v=20260714-5"></script>
   <script src="data-service.js?v=20260714-5"></script>
   <script src="inventory.js?v=20260630-2"></script>
-  <script src="admin.js?v=20260714-4"></script>
+  <script src="admin.js?v=20260715-1"></script>
 </body>
 </html>
 
