@@ -1,4 +1,9 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/page": "app/page.js"
+  "/page": "app/page.js",
+  "/api/telegram/login/route": "app/api/telegram/login/route.js",
+  "/api/telegram/status/route": "app/api/telegram/status/route.js",
+  "/api/telegram/input/route": "app/api/telegram/input/route.js",
+  "/api/media/route": "app/api/media/route.js",
+  "/api/download/route": "app/api/download/route.js"
 }
