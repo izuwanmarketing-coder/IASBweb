@@ -47,9 +47,15 @@
     if (!displayCars.length) return fallback();
 
     grid.innerHTML = displayCars.map(car => {
-      const detailLine = [car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "Maklumat unit";
+      const detailLine = [car.variant, mileage(car.mileage)].filter(Boolean).join(" · ") || "Maklumat unit";
       const detailHref = car.id ? `car.html?id=${encodeURIComponent(car.id)}` : "inventory.html";
       const message = `[Homepage Featured Stock] Hai, saya berminat dengan featured stock ${car.brand} ${car.model} (${detailLine}). Masih available?`;
+      const quickSpecs = [
+        ["Year", car.year || "On request"],
+        ["Grade", car.grade || "On request"],
+        ["Transmission", car.transmission || "On request"],
+        ["Engine", car.engine || "On request"]
+      ];
       return `<article class="featured-stock-card">
         <div class="featured-stock-photo">${car.image_url
           ? `<img loading="lazy" src="${safeText(car.image_url)}" alt="${safeText(`${car.brand} ${car.model}`)}">`
@@ -58,9 +64,8 @@
           <small><span class="stock-status ${statusClass(car.status)}"><i aria-hidden="true"></i>${safeText(statusLabel(car.status))}</span><span>${safeText(car.location || "Izuwan Automobile")}</span></small>
           <h3>${safeText(car.brand)} ${safeText(car.model)}</h3>
           <p>${safeText(detailLine)}</p>
-          <div class="featured-stock-specs">
-            <span>${safeText(car.type || "Recond")}</span>
-            <span>${safeText(mileage(car.mileage))}</span>
+          <div class="featured-stock-specs" aria-label="Quick vehicle specifications">
+            ${quickSpecs.map(([label, value]) => `<span><em>${safeText(label)}</em><b>${safeText(value)}</b></span>`).join("")}
           </div>
           <div class="featured-stock-bottom">
             <strong>${displayPrice(car.price)}</strong>
