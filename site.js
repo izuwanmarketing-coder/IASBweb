@@ -171,7 +171,9 @@
   updateScrollUi();
 
   const revealTargets = document.querySelectorAll(
-    ".home-intro, .home-services article, .brand-proof article, .programme-feature, " +
+    ".pathway-heading, .pathway-grid a, .featured-stock-section > .section-heading, " +
+    ".delivered-section > .section-heading, .home-cta, .home-intro, .home-services article, " +
+    ".brand-proof article, .programme-feature, " +
     ".services-band article, .hq-strip, .profile-grid, .values-grid article, .journey-section li, " +
     ".inventory-card, .process-grid article, .programme-benefits > div, .contact-layout > div, " +
     ".team-grid article, .social-strip, .tool-next, .calculator-shell, .otr-shell"

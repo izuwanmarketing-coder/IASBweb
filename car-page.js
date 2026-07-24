@@ -249,14 +249,26 @@
 
     let activePhoto = 0;
     const dialog = document.getElementById("carImageDialog");
+    const reduceGalleryMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let galleryCloseTimer = 0;
+    const animateGalleryImage = image => {
+      if (reduceGalleryMotion || !dialog.open || !image) return;
+      image.classList.remove("is-changing");
+      void image.offsetWidth;
+      image.classList.add("is-changing");
+    };
     const updateGallery = (index, updateMain = true) => {
       activePhoto = (index + photos.length) % photos.length;
       if (updateMain) {
-        document.getElementById("carMainImage").src = photos[activePhoto];
-        document.getElementById("carMainImage").alt = `${title}, gambar ${activePhoto + 1} daripada ${photos.length}`;
+        const mainImage = document.getElementById("carMainImage");
+        mainImage.src = photos[activePhoto];
+        mainImage.alt = `${title}, gambar ${activePhoto + 1} daripada ${photos.length}`;
+        animateGalleryImage(mainImage);
       }
-      document.getElementById("carImageLarge").src = photos[activePhoto];
-      document.getElementById("carImageLarge").alt = `${title}, gambar ${activePhoto + 1} daripada ${photos.length}`;
+      const largeImage = document.getElementById("carImageLarge");
+      largeImage.src = photos[activePhoto];
+      largeImage.alt = `${title}, gambar ${activePhoto + 1} daripada ${photos.length}`;
+      animateGalleryImage(largeImage);
       document.getElementById("carImageDialogTitle").textContent = title;
       document.getElementById("carImageCounter").textContent = `${activePhoto + 1} / ${photos.length}`;
       document.querySelectorAll("[data-car-thumb-index]").forEach(item => item.classList.toggle("active", Number(item.dataset.carThumbIndex) === activePhoto));
@@ -266,15 +278,37 @@
     const openGallery = () => {
       updateGallery(activePhoto, false);
       dialog.showModal();
+      window.clearTimeout(galleryCloseTimer);
+      dialog.classList.remove("is-closing");
+      dialog.classList.add("is-visible");
+    };
+    const closeGallery = () => {
+      if (!dialog.open) return;
+      window.clearTimeout(galleryCloseTimer);
+      if (reduceGalleryMotion) {
+        dialog.close();
+        dialog.classList.remove("is-visible");
+        return;
+      }
+      dialog.classList.remove("is-visible");
+      dialog.classList.add("is-closing");
+      galleryCloseTimer = window.setTimeout(() => {
+        dialog.close();
+        dialog.classList.remove("is-closing");
+      }, 180);
     };
 
     document.querySelectorAll("[data-car-thumb-index]").forEach(button => button.addEventListener("click", () => updateGallery(Number(button.dataset.carThumbIndex))));
     const openCarImage = document.getElementById("openCarImage");
     if (openCarImage) openCarImage.onclick = openGallery;
-    document.getElementById("carImageClose").onclick = () => dialog.close();
+    document.getElementById("carImageClose").onclick = closeGallery;
     document.getElementById("carImagePrev").onclick = () => updateGallery(activePhoto - 1);
     document.getElementById("carImageNext").onclick = () => updateGallery(activePhoto + 1);
-    dialog.onclick = event => { if (event.target === dialog) dialog.close(); };
+    dialog.onclick = event => { if (event.target === dialog) closeGallery(); };
+    dialog.oncancel = event => {
+      event.preventDefault();
+      closeGallery();
+    };
     dialog.onkeydown = event => {
       if (event.key === "ArrowLeft") updateGallery(activePhoto - 1);
       if (event.key === "ArrowRight") updateGallery(activePhoto + 1);

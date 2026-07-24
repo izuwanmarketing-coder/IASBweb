@@ -3301,3 +3301,186 @@ body.has-live-event .home-hero { padding-top: clamp(42px, 5vw, 68px); }
   .mobile-action-bar span,
   .mobile-action-bar b { font-size: 11px; }
 }
+
+/* Premium motion system: cinematic, lightweight, and layout-safe. */
+.pathway-grid a::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), rgba(227,27,35,.18));
+  transform: scaleX(0);
+  transform-origin: left;
+  pointer-events: none;
+}
+
+.featured-stock-card {
+  position: relative;
+  isolation: isolate;
+}
+.featured-stock-card::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  background: linear-gradient(112deg, transparent 30%, rgba(255,255,255,.11) 48%, transparent 66%);
+  opacity: 0;
+  transform: translateX(-115%);
+  pointer-events: none;
+}
+.featured-stock-photo,
+.featured-stock-copy { position: relative; z-index: 1; }
+
+.car-image-dialog .car-image-viewer {
+  opacity: 0;
+  transform: scale(.975);
+  transition: opacity .2s ease, transform .28s cubic-bezier(.2,.72,.2,1);
+}
+.car-image-dialog::backdrop {
+  background: transparent;
+  transition: background .2s ease;
+}
+.car-image-dialog.is-visible .car-image-viewer {
+  opacity: 1;
+  transform: none;
+}
+.car-image-dialog.is-visible::backdrop { background: rgba(0,0,0,.96); }
+.car-image-dialog.is-closing .car-image-viewer {
+  opacity: 0;
+  transform: scale(.985);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-hero-copy .company-kicker {
+    animation: hero-copy-in .58s cubic-bezier(.2,.72,.2,1) .08s both;
+  }
+  .home-hero h1 > span {
+    animation: hero-line-in .78s cubic-bezier(.16,.78,.18,1) .15s both;
+  }
+  .home-hero h1 > em {
+    animation: hero-line-in .82s cubic-bezier(.16,.78,.18,1) .25s both;
+  }
+  .home-hero-copy > p {
+    animation: hero-copy-in .7s cubic-bezier(.2,.72,.2,1) .38s both;
+  }
+  .home-hero .hero-actions {
+    animation: hero-copy-in .68s cubic-bezier(.2,.72,.2,1) .48s both;
+  }
+  .home-hero .hero-assurance {
+    animation: hero-copy-in .68s cubic-bezier(.2,.72,.2,1) .58s both;
+  }
+  .home-hero-visual {
+    animation: hero-visual-in .92s cubic-bezier(.16,.78,.18,1) .18s both;
+  }
+  .home-hero-visual .hero-car-label {
+    animation: hero-label-in .68s cubic-bezier(.2,.72,.2,1) .74s both;
+  }
+  .hero-index {
+    animation: hero-copy-in .55s ease .82s both;
+  }
+
+  .pathway-grid a.reveal.revealed::after {
+    transform: scaleX(1);
+    transition: transform .72s cubic-bezier(.2,.72,.2,1) var(--reveal-delay, 0ms);
+  }
+  .pathway-grid a.reveal.revealed h3,
+  .pathway-grid a.reveal.revealed p,
+  .pathway-grid a.reveal.revealed b {
+    animation: pathway-content-in .62s cubic-bezier(.2,.72,.2,1) calc(var(--reveal-delay, 0ms) + 90ms) both;
+  }
+
+  .featured-stock-card.stock-card-motion {
+    opacity: 0;
+    transform: translateY(30px) scale(.985);
+    transition:
+      opacity .68s ease,
+      transform .72s cubic-bezier(.2,.72,.2,1),
+      border-color .28s ease,
+      box-shadow .28s ease;
+  }
+  .featured-stock-card.stock-card-motion.motion-visible {
+    opacity: 1;
+    transform: none;
+    transition-delay: var(--card-delay, 0ms);
+  }
+  .featured-stock-card.stock-card-motion.motion-visible:hover {
+    transform: translateY(-8px);
+    border-color: rgba(227,27,35,.64);
+    box-shadow: 0 26px 64px rgba(0,0,0,.3);
+    transition-delay: 0ms;
+  }
+  .featured-stock-card.motion-visible:hover::after {
+    opacity: 1;
+    transform: translateX(115%);
+    transition: opacity .25s ease, transform .82s cubic-bezier(.2,.72,.2,1);
+  }
+  .featured-stock-card.stock-card-motion .featured-stock-specs span {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity .42s ease, transform .48s cubic-bezier(.2,.72,.2,1);
+  }
+  .featured-stock-card.stock-card-motion.motion-visible .featured-stock-specs span {
+    opacity: 1;
+    transform: none;
+  }
+  .featured-stock-card.stock-card-motion.motion-visible .featured-stock-specs span:nth-child(1) { transition-delay: calc(var(--card-delay, 0ms) + 180ms); }
+  .featured-stock-card.stock-card-motion.motion-visible .featured-stock-specs span:nth-child(2) { transition-delay: calc(var(--card-delay, 0ms) + 220ms); }
+  .featured-stock-card.stock-card-motion.motion-visible .featured-stock-specs span:nth-child(3) { transition-delay: calc(var(--card-delay, 0ms) + 260ms); }
+  .featured-stock-card.stock-card-motion.motion-visible .featured-stock-specs span:nth-child(4) { transition-delay: calc(var(--card-delay, 0ms) + 300ms); }
+
+  .car-main-image.is-changing,
+  .car-image-viewer figure > img.is-changing {
+    animation: gallery-image-change .32s cubic-bezier(.2,.72,.2,1);
+  }
+  .car-image-dialog[open].is-visible .car-image-viewer {
+    animation: gallery-viewer-in .28s cubic-bezier(.2,.72,.2,1);
+  }
+  .car-thumbs button {
+    transition: opacity .2s ease, border-color .2s ease, transform .22s ease;
+  }
+  .car-thumbs button:hover { transform: translateY(-3px); }
+
+  @keyframes hero-line-in {
+    from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(34px); }
+    to { opacity: 1; clip-path: inset(0); transform: none; }
+  }
+  @keyframes hero-copy-in {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes hero-visual-in {
+    from { opacity: 0; clip-path: inset(0 0 0 18%); transform: translateX(34px) scale(.985); }
+    to { opacity: 1; clip-path: inset(0); transform: none; }
+  }
+  @keyframes hero-label-in {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pathway-content-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes gallery-image-change {
+    0% { opacity: .28; transform: scale(.985); }
+    100% { opacity: 1; transform: none; }
+  }
+  @keyframes gallery-viewer-in {
+    from { opacity: 0; transform: scale(.975); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+@media (max-width: 680px) {
+  .featured-stock-card.stock-card-motion,
+  .featured-stock-card.stock-card-motion.motion-visible { opacity: 1; transform: none; }
+  .featured-stock-card::after { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pathway-grid a::after { transform: scaleX(1); }
+  .car-image-dialog .car-image-viewer { opacity: 1; transform: none; transition: none; }
+  .car-image-dialog::backdrop { background: rgba(0,0,0,.96); transition: none; }
+}

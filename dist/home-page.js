@@ -7,6 +7,7 @@
   const displayPrice = value => Number(value) >= 10000 ? money(value) : "Harga perlu disahkan";
   const statusLabel = value => window.IASBSite?.statusLabel(value) || String(value || "Ready Stock");
   const statusClass = value => `status-${String(value || "available").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
+  let cardMotionObserver = null;
 
   function safeText(value) {
     return String(value ?? "")
@@ -37,6 +38,33 @@
   }
 
   grid.setAttribute("aria-live", "polite");
+
+  function prepareCardMotion() {
+    cardMotionObserver?.disconnect();
+    const cards = [...grid.querySelectorAll(".featured-stock-card")];
+    cards.forEach((card, index) => {
+      card.classList.add("stock-card-motion");
+      card.style.setProperty("--card-index", index);
+      card.style.setProperty("--card-delay", `${index * 65}ms`);
+    });
+
+    const showCard = card => card.classList.add("motion-visible");
+    if (!cards.length ||
+        !("IntersectionObserver" in window) ||
+        window.matchMedia("(prefers-reduced-motion: reduce), (max-width: 600px)").matches) {
+      cards.forEach(showCard);
+      return;
+    }
+
+    cardMotionObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        showCard(entry.target);
+        cardMotionObserver.unobserve(entry.target);
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -35px" });
+    cards.forEach(card => cardMotionObserver.observe(card));
+  }
 
   function render(cars) {
     const list = cars || [];
@@ -77,6 +105,7 @@
         </div>
       </article>`;
     }).join("");
+    prepareCardMotion();
   }
 
   window.addEventListener("iasb:data", event => render(event.detail.inventory || []));
