@@ -122,42 +122,46 @@
 
   const mobileActions = document.createElement("nav");
   mobileActions.className = "mobile-action-bar";
-  mobileActions.setAttribute("aria-label", "Tindakan pantas");
+  mobileActions.setAttribute("aria-label", "Navigasi utama mudah alih");
   const currentPage = location.pathname.split("/").pop() || "index.html";
-  const mobileContext = currentPage === "contact.html"
-    ? {
-        message: "Hai, saya ingin buat temu janji untuk melawat HQ Izuwan Automobile di Taman Wahyu.",
-        secondaryHref: "https://www.google.com/maps/search/?api=1&query=Izuwan+Automobile+Sdn+Bhd+Taman+Wahyu",
-        secondaryIcon: "MAP",
-        secondaryLabel: "Directions",
-        thirdHref: "inventory.html",
-        thirdIcon: "CAR",
-        thirdLabel: "Inventory",
-        external: true
-      }
+  const mobileMessage = currentPage === "contact.html"
+    ? "Hai, saya ingin buat temu janji untuk melawat HQ Izuwan Automobile di Taman Wahyu."
     : currentPage === "select-programme.html"
-      ? {
-          message: "Hai, saya berminat dengan Izuwan Select Programme dan ingin source kereta dari Jepun.",
-          secondaryHref: "inventory.html",
-          secondaryIcon: "CAR",
-          secondaryLabel: "Ready Stock",
-          thirdHref: "calculator.html",
-          thirdIcon: "RM",
-          thirdLabel: "Calculator"
-        }
-      : {
-          message: "Hai, saya ingin bertanya tentang kereta di Izuwan Automobile.",
-          secondaryHref: "inventory.html",
-          secondaryIcon: "CAR",
-          secondaryLabel: "Inventory",
-          thirdHref: "calculator.html",
-          thirdIcon: "RM",
-          thirdLabel: "Calculator"
-        };
-  mobileActions.innerHTML = `
-    <a data-mobile-whatsapp data-whatsapp-message="${safeText(mobileContext.message)}" target="_blank" rel="noopener"><span aria-hidden="true">WA</span><b>WhatsApp</b></a>
-    <a href="${mobileContext.secondaryHref}"${mobileContext.external ? ' target="_blank" rel="noopener"' : ""}><span aria-hidden="true">${mobileContext.secondaryIcon}</span><b>${mobileContext.secondaryLabel}</b></a>
-    <a href="${mobileContext.thirdHref}"><span aria-hidden="true">${mobileContext.thirdIcon}</span><b>${mobileContext.thirdLabel}</b></a>`;
+      ? "Hai, saya berminat dengan Izuwan Select Programme dan ingin source kereta dari Jepun."
+      : "Hai, saya ingin bertanya tentang kereta di Izuwan Automobile.";
+  const activeMobileItem = currentPage === "index.html"
+    ? "home"
+    : ["inventory.html", "car.html"].includes(currentPage)
+      ? "stock"
+      : ["find-car.html", "select-programme.html"].includes(currentPage)
+        ? "find"
+        : ["calculator.html", "otr.html", "model-guides.html"].includes(currentPage)
+          ? "tools"
+          : "";
+  const mobileIcons = {
+    home: `<svg viewBox="0 0 24 24" aria-hidden="true"><path class="nav-fill" d="M3.5 10.6 12 3.8l8.5 6.8v9a1.4 1.4 0 0 1-1.4 1.4h-4.6v-6.2h-5V21H4.9a1.4 1.4 0 0 1-1.4-1.4z"/></svg>`,
+    stock: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2 16.8h13.6l-1.2-5.1a2.5 2.5 0 0 0-2.4-1.9H8.8a2.5 2.5 0 0 0-2.4 1.9z"/><path d="M3.5 16.8h17v2.3a1.4 1.4 0 0 1-1.4 1.4H4.9a1.4 1.4 0 0 1-1.4-1.4zM6.3 9.8 8 6.5h8l1.7 3.3"/><circle cx="7" cy="17.5" r="1.1"/><circle cx="17" cy="17.5" r="1.1"/></svg>`,
+    whatsapp: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 11.7a8.2 8.2 0 0 1-12.1 7.2L4 20l1.1-4a8.2 8.2 0 1 1 15.1-4.3Z"/><path d="M9.1 8.2c.2-.5.4-.5.8-.5h.4c.1 0 .3 0 .4.4l.8 1.9c.1.3.1.5-.1.7l-.6.7c-.2.2-.2.4 0 .7.7 1.2 1.7 2.1 2.9 2.7.3.2.5.1.7-.1l.8-1c.2-.2.4-.3.7-.2l1.8.9c.3.1.5.2.5.4 0 .2-.1 1.2-.6 1.7-.5.6-1.4.9-2.2.9-.6 0-1.4-.2-2.5-.7-1.4-.6-2.5-1.4-3.5-2.4-1-1-1.8-2.2-2.3-3.4-.5-1.1-.5-2-.4-2.6.1-.5.3-1 .6-1.4Z"/></svg>`,
+    find: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.3 15.3 5.2 5.2M10.5 7.7v5.6M7.7 10.5h5.6"/></svg>`,
+    tools: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.2"/><path d="M7.5 7.2h9M8 11h1M12 11h1M16 11h1M8 14.5h1M12 14.5h1M16 14.5h1M8 18h1M12 18h1M16 18h1"/></svg>`
+  };
+  const mobileItems = [
+    { key: "home", href: "index.html", label: "Home" },
+    { key: "stock", href: "inventory.html", label: "Stock" },
+    { key: "whatsapp", label: "WhatsApp", primary: true },
+    { key: "find", href: "find-car.html", label: "Find Car" },
+    { key: "tools", href: "calculator.html", label: "Tools" }
+  ];
+  mobileActions.innerHTML = mobileItems.map(item => {
+    const isActive = item.key === activeMobileItem;
+    const attributes = item.primary
+      ? `data-mobile-whatsapp data-whatsapp-message="${safeText(mobileMessage)}" target="_blank" rel="noopener" aria-label="WhatsApp Izuwan Automobile"`
+      : `href="${item.href}"${isActive ? ' aria-current="page"' : ""}`;
+    return `<a class="mobile-nav-item${item.primary ? " mobile-nav-primary" : ""}${isActive ? " active" : ""}" ${attributes}>
+      <span class="mobile-nav-icon">${mobileIcons[item.key]}</span>
+      <b>${item.label}</b>
+    </a>`;
+  }).join("");
   document.body.appendChild(mobileActions);
 
   const backToTop = quickActions.querySelector(".back-to-top");

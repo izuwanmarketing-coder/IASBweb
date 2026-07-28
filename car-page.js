@@ -233,7 +233,8 @@
     if (mobileWhatsapp) {
       mobileWhatsapp.dataset.whatsappMessage = whatsappMessage;
       mobileWhatsapp.href = window.IASBSite.whatsappUrl(whatsappMessage);
-      mobileWhatsapp.querySelector("b").textContent = "Enquire car";
+      mobileWhatsapp.setAttribute("aria-label", `Enquire about ${title} on WhatsApp`);
+      mobileWhatsapp.querySelector("b").textContent = "Enquire";
     }
     document.getElementById("paymentEstimator")?.addEventListener("submit", event => event.preventDefault());
     const malaysiaDateParts = new Intl.DateTimeFormat("en-CA", {
