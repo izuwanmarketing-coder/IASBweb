@@ -56,7 +56,9 @@ the configured Google Sheet through `_worker.js`. The Cloudflare Pages Worker
 keeps cost, duty, profit and internal note columns
 server-side, while the browser receives only public stock fields. Responses are
 cached at the edge for up to five minutes and fall back to Supabase if Google
-Sheets is unavailable.
+Sheets is unavailable. The Worker also reads dated worksheet tabs and exposes
+the newest valid tab date, so public `PRICELIST` labels follow the latest
+pricelist tab without a manual Supabase update.
 
 Optional Cloudflare environment variables:
 

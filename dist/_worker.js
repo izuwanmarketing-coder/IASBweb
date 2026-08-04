@@ -1,6 +1,39 @@
 const DEFAULT_SHEET_ID = "1InuhPGVy7jkjX2cuRZwDK3QbShzU4FJd";
 const DEFAULT_SHEET_NAME = "MAIN IASB ";
 
+function parsePricelistDate(value) {
+  const match = String(value || "").trim().match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2}|\d{4})$/);
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]) < 100 ? 2000 + Number(match[3]) : Number(match[3]);
+  const timestamp = Date.UTC(year, month - 1, day);
+  const date = new Date(timestamp);
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return {
+    timestamp,
+    label: `${String(day).padStart(2, "0")}.${String(month).padStart(2, "0")}.${year}`
+  };
+}
+
+function latestPricelistDate(source) {
+  const labels = [...String(source || "").matchAll(/docs-sheet-tab-caption[^>]*>\s*([^<]+?)\s*</g)]
+    .map(match => parsePricelistDate(match[1]))
+    .filter(Boolean)
+    .sort((left, right) => right.timestamp - left.timestamp);
+  return labels[0]?.label || "";
+}
+
+async function getSheetPricelistDate(sheetId) {
+  const sourceUrl = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}/edit?usp=sharing`;
+  const response = await fetch(sourceUrl, {
+    headers: { Accept: "text/html" },
+    cf: { cacheEverything: true, cacheTtl: 300 }
+  });
+  if (!response.ok) throw new Error(`Google Sheet metadata request failed (${response.status})`);
+  return latestPricelistDate(await response.text());
+}
+
 function parseCsv(text) {
   const rows = [];
   let row = [];
@@ -59,19 +92,27 @@ async function inventoryResponse(env) {
   const sheetId = env.INVENTORY_SHEET_ID || DEFAULT_SHEET_ID;
   const sheetName = env.INVENTORY_SHEET_NAME || DEFAULT_SHEET_NAME;
   const sourceUrl = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-  const response = await fetch(sourceUrl, {
-    headers: { Accept: "text/csv" },
-    cf: { cacheEverything: true, cacheTtl: 300 }
-  });
+  const [response, pricelistDate] = await Promise.all([
+    fetch(sourceUrl, {
+      headers: { Accept: "text/csv" },
+      cf: { cacheEverything: true, cacheTtl: 300 }
+    }),
+    getSheetPricelistDate(sheetId).catch(error => {
+      console.error("Google Sheet pricelist date unavailable", error);
+      return "";
+    })
+  ]);
   if (!response.ok) return Response.json({ error: "Inventory source unavailable" }, { status: 502 });
 
   try {
+    const headers = {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Cache-Control": "public, max-age=60, s-maxage=300",
+      "X-Content-Type-Options": "nosniff"
+    };
+    if (pricelistDate) headers["X-Inventory-Pricelist-Date"] = pricelistDate;
     return new Response(safeInventoryCsv(await response.text()), {
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Cache-Control": "public, max-age=60, s-maxage=300",
-        "X-Content-Type-Options": "nosniff"
-      }
+      headers
     });
   } catch (error) {
     console.error("Google Sheet inventory parse failed", error);

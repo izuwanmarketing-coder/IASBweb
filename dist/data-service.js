@@ -131,7 +131,7 @@
     return current;
   }
 
-  function parseSheetInventory(text) {
+  function parseSheetInventory(text, pricelistDate = "") {
     const rows = parseCsv(text);
     const headerIndex = rows.findIndex(row => {
       const headers = row.map(normalizedHeader);
@@ -151,6 +151,7 @@
     });
     const at = (row, name) => row[headerMap.get(name)] ?? "";
     const inventory = [];
+    const pricelistTag = clean(pricelistDate) ? `PRICELIST ${clean(pricelistDate)}` : "";
     let location = "";
     for (const row of rows.slice(headerIndex + 1)) {
       const rawModel = clean(at(row, "model"));
@@ -178,7 +179,7 @@
         description: clean(at(row, "specs")),
         exterior_color: clean(at(row, "colour")),
         interior_color: "",
-        campaign_tag: "",
+        campaign_tag: pricelistTag,
         chassis_no: chassis,
         marketing_label: clean(at(row, "stockno")),
         image_url: "",
@@ -216,7 +217,7 @@
         interior_color: managed.interior_color || "",
         image_url: managed.image_url || "",
         gallery_urls: Array.isArray(managed.gallery_urls) ? managed.gallery_urls : [],
-        campaign_tag: managed.campaign_tag || "",
+        campaign_tag: sheetCar.campaign_tag || managed.campaign_tag || "",
         is_featured: Boolean(managed.is_featured),
         is_hot: Boolean(managed.is_hot),
         auction_report: Boolean(managed.auction_report),
@@ -230,7 +231,11 @@
     if (!sheetConfigured) return null;
     const response = await fetch(sheetUrl, { cache: "no-store" });
     if (!response.ok) throw new Error(`Google Sheet request failed (${response.status})`);
-    return mergeSheetInventory(parseSheetInventory(await response.text()), managedRows);
+    const pricelistDate = clean(response.headers.get("X-Inventory-Pricelist-Date"));
+    return {
+      inventory: mergeSheetInventory(parseSheetInventory(await response.text(), pricelistDate), managedRows),
+      pricelistDate
+    };
   }
 
   async function getInventory() {
@@ -333,7 +338,7 @@
     mergeSheetInventory,
     async loadPublicData() {
       if (!client && !sheetConfigured) return { inventory: null, settings: null, salesmen: null, events: [], deliveries: [] };
-      const [managedInventory, settings, salesmen, events, deliveries] = client ? await Promise.all([
+      let [managedInventory, settings, salesmen, events, deliveries] = client ? await Promise.all([
         getInventory(),
         getSettings(),
         getSalesmen(),
@@ -342,15 +347,19 @@
       ]) : [[], null, null, [], []];
       let inventory = managedInventory;
       let inventorySource = client ? "supabase" : "none";
+      let pricelistDate = "";
       if (sheetConfigured) {
         try {
-          inventory = await getSheetInventory(managedInventory || []);
+          const sheetData = await getSheetInventory(managedInventory || []);
+          inventory = sheetData.inventory;
+          pricelistDate = sheetData.pricelistDate;
           inventorySource = "google-sheet";
+          if (pricelistDate) settings = { ...(settings || {}), pricelist_date: pricelistDate };
         } catch (error) {
           console.warn("Google Sheet inventory unavailable; using managed fallback.", error);
         }
       }
-      return { inventory, inventorySource, settings, salesmen, events, deliveries };
+      return { inventory, inventorySource, pricelistDate, settings, salesmen, events, deliveries };
     }
   };
 })();
