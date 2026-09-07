@@ -49,6 +49,10 @@ const files = [
   "site.webmanifest",
   "sitemap.xml",
   "styles.css",
+  "makeover.css",
+  "makeover.js",
+  "glass-pages.css",
+  "glass-pages.js",
   "terms.html"
 ];
 
