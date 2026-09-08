@@ -1,5 +1,9 @@
 (function () {
   const $ = id => document.getElementById(id);
+  const pageFile = () => {
+    const name = location.pathname.split("/").filter(Boolean).pop() || "index";
+    return name.endsWith(".html") ? name : `${name}.html`;
+  };
 
   function safeText(value) {
     return String(value ?? "")
@@ -54,7 +58,9 @@
     }
   }
 
-  applyTheme(localStorage.getItem("iasb-theme") || "dark");
+  let savedTheme = "dark";
+  try { savedTheme = localStorage.getItem("iasb-theme") || "dark"; } catch {}
+  applyTheme(savedTheme);
 
   const mainNav = $("siteNav");
   if (mainNav) {
@@ -82,7 +88,7 @@
 
   $("themeButton")?.addEventListener("click", () => {
     const theme = document.body.classList.contains("light") ? "dark" : "light";
-    localStorage.setItem("iasb-theme", theme);
+    try { localStorage.setItem("iasb-theme", theme); } catch {}
     applyTheme(theme);
   });
 
@@ -93,7 +99,7 @@
   });
 
   document.querySelectorAll("#siteNav a").forEach(link => {
-    const current = location.pathname.split("/").pop() || "index.html";
+    const current = ({ "car.html": "inventory.html", "otr.html": "calculator.html", "model-guides.html": "calculator.html" })[pageFile()] || pageFile();
     const target = link.getAttribute("href").split("#")[0] || "index.html";
     link.classList.toggle("active", current === target);
     if (current === target) link.setAttribute("aria-current", "page");
@@ -123,7 +129,7 @@
   const mobileActions = document.createElement("nav");
   mobileActions.className = "mobile-action-bar";
   mobileActions.setAttribute("aria-label", "Navigasi utama mudah alih");
-  const currentPage = location.pathname.split("/").pop() || "index.html";
+  const currentPage = pageFile();
   const mobileMessage = currentPage === "contact.html"
     ? "Hai, saya ingin buat temu janji untuk melawat HQ Izuwan Automobile di Taman Wahyu."
     : currentPage === "select-programme.html"

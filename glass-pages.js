@@ -9,6 +9,19 @@
   const footer=document.querySelector('.site-footer');
   if(footer){const mark=document.createElement('a');mark.className='glass-footer-wordmark';mark.href='index.html';mark.textContent='IZUWAN';footer.prepend(mark);}
   const nav=document.getElementById('siteNav');
+  // Legal pages have no data service or site.js, but still need working navigation.
+  if (nav && !window.IASBSite) {
+    const menu = document.getElementById('menuButton');
+    menu?.setAttribute('aria-controls', 'siteNav');
+    menu?.addEventListener('click', () => {
+      menu.setAttribute('aria-expanded', String(nav.classList.toggle('open')));
+    });
+    const current = (location.pathname.split('/').filter(Boolean).pop() || 'index').replace(/\.html$/, '');
+    nav.querySelectorAll('a').forEach(link => {
+      if (link.getAttribute('href').replace(/\.html$/, '') === current) link.setAttribute('aria-current', 'page');
+      link.addEventListener('click', () => { nav.classList.remove('open'); menu?.setAttribute('aria-expanded', 'false'); });
+    });
+  }
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&nav?.classList.contains('open')){nav.classList.remove('open');const menu=document.getElementById('menuButton');menu?.setAttribute('aria-expanded','false');menu?.focus();}});
   let paused=false;
   try { paused=sessionStorage.getItem('iasb-motion-paused')==='true'; } catch {}

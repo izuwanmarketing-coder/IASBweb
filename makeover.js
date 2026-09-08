@@ -90,6 +90,7 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
   let paused = false, visible = true, frame = 0, pointerX = 0, pointerY = 0;
+  try { paused = sessionStorage.getItem("iasb-motion-paused") === "true"; } catch {}
   const activeAnimations = new Set();
   const motionAllowed = () => !paused && !reduced.matches && !document.hidden;
   function draw() {
@@ -116,7 +117,7 @@
       hero.style.removeProperty('--hero-x'); hero.style.removeProperty('--hero-y');
     } else schedule();
   }
-  toggle.addEventListener('click', () => { paused = !paused; syncMotion(); });
+  toggle.addEventListener('click', () => { paused = !paused; try { sessionStorage.setItem('iasb-motion-paused', String(paused)); } catch {} syncMotion(); });
   reduced.addEventListener('change', syncMotion);
   document.addEventListener('visibilitychange', syncMotion);
   window.addEventListener('scroll', schedule, {passive:true});
