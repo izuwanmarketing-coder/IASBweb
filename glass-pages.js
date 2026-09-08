@@ -13,7 +13,7 @@
   let paused=false;
   try { paused=sessionStorage.getItem('iasb-motion-paused')==='true'; } catch {}
   const control=document.createElement('button'); control.type='button';control.className='page-motion-control';
-  document.body.append(control);
+  (footer || document.body).append(control);
   function sync(){document.body.classList.toggle('motion-paused',paused||document.hidden);control.setAttribute('aria-pressed',String(paused));control.setAttribute('aria-label',paused?'Play animations':'Pause animations');control.textContent=paused?'▶ MOTION':'Ⅱ MOTION';}
   control.addEventListener('click',()=>{paused=!paused;try{sessionStorage.setItem('iasb-motion-paused',String(paused));}catch{}sync();});
   document.addEventListener('visibilitychange',sync); sync();
