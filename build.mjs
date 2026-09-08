@@ -48,6 +48,8 @@ const files = [
   "site.js",
   "site.webmanifest",
   "sitemap.xml",
+  "smooth-select.css",
+  "smooth-select.js",
   "styles.css",
   "makeover.css",
   "makeover.js",
