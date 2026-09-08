@@ -324,6 +324,15 @@
     const estimateFields = ["estimateDownpayment", "estimateYears", "estimateRate"].map(id => document.getElementById(id)).filter(Boolean);
     if (estimateFields.length === 3) {
       const updateEstimate = () => {
+        const invalid = estimateFields.map(field => {
+          const bad = field.validity.badInput || field.validity.rangeUnderflow || !Number.isFinite(Number(field.value));
+          field.setAttribute("aria-invalid", String(bad));
+          return bad;
+        }).some(Boolean);
+        if (invalid) {
+          document.getElementById("estimateOutput").textContent = "Semak input";
+          return;
+        }
         const downpayment = document.getElementById("estimateDownpayment").value;
         const years = document.getElementById("estimateYears").value;
         const rate = document.getElementById("estimateRate").value;

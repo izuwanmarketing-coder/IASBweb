@@ -36,7 +36,12 @@
   function updateExportState() {
     const hasModel = Boolean($("vehicleName").value.trim());
     const hasPrice = value("otrSellingPrice") > 0;
-    const valid = hasModel && hasPrice;
+    const invalidNumbers = fieldIds.filter(id => {
+      const bad = ($(id).validity.badInput || $(id).validity.rangeUnderflow || $(id).validity.rangeOverflow || $(id).validity.valueMissing) || !Number.isFinite(Number($(id).value));
+      $(id).setAttribute("aria-invalid", String(bad));
+      return bad;
+    });
+    const valid = hasModel && hasPrice && invalidNumbers.length === 0;
     ["otrWhatsappButton", "otrCopyButton", "printQuotationButton"].forEach(id => {
       $(id).disabled = !valid;
     });
@@ -45,6 +50,7 @@
     $("otrSellingPrice").setAttribute("aria-invalid", String(hasStarted && !hasPrice));
     $("quotationFormStatus").textContent = valid
       ? "Quotation sedia untuk disemak, dikongsi atau disimpan sebagai PDF."
+      : invalidNumbers.length && hasModel && hasPrice ? "Semak nilai caj dan bayaran: gunakan nombor positif yang sah."
       : `Masukkan ${!hasModel && !hasPrice ? "model dan selling price" : !hasModel ? "model" : "selling price"} untuk aktifkan quotation.`;
     $("quotationFormStatus").classList.toggle("ready", valid);
     return valid;
