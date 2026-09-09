@@ -12,6 +12,23 @@
   }
 
   function calculate() {
+    const activeFields = fields.filter(id => mode === "target" || id !== "carPrice");
+    const invalid = activeFields.map(id => {
+      const input = $(id);
+      const bad = (input.validity.badInput || input.validity.rangeUnderflow || input.validity.rangeOverflow || input.validity.valueMissing) || !Number.isFinite(Number(input.value));
+      input.setAttribute("aria-invalid", String(bad));
+      return bad;
+    }).some(Boolean);
+    const missingSalary = Number($("salary").value) <= 0;
+    ["copyButton", "whatsappButton"].forEach(id => $(id).disabled = invalid || missingSalary);
+    if (invalid || missingSalary) {
+      $("monthlyBudget").textContent = "—";
+      ["maxPrice", "loanAmount", "finalDsr", "depositAmount"].forEach(id => $(id).textContent = "—");
+      $("resultBadge").textContent = "SEMAK INPUT";
+      $("resultBadge").classList.add("warning");
+      $("resultDescription").textContent = "Masukkan gaji melebihi sifar dan nilai yang sah sebelum membuat anggaran.";
+      return;
+    }
     const salary = Number($("salary").value) || 0;
     const commitment = Number($("commitment").value) || 0;
     const deposit = Number($("deposit").value) || 0;

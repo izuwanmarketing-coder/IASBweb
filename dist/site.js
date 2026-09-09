@@ -1,5 +1,10 @@
 (function () {
   const $ = id => document.getElementById(id);
+  const cleanPath = value => String(value || "").replace(/(^|\/)index\.html(?=([?#]|$))/i, "$1").replace(/\.html(?=([?#]|$))/gi, "");
+  const pageFile = () => {
+    const name = location.pathname.split("/").filter(Boolean).pop() || "index";
+    return name.endsWith(".html") ? name : `${name}.html`;
+  };
 
   function safeText(value) {
     return String(value ?? "")
@@ -54,35 +59,35 @@
     }
   }
 
-  applyTheme(localStorage.getItem("iasb-theme") || "dark");
+  let savedTheme = "dark";
+  try { savedTheme = localStorage.getItem("iasb-theme") || "dark"; } catch {}
+  applyTheme(savedTheme);
 
   const mainNav = $("siteNav");
   if (mainNav) {
     mainNav.setAttribute("aria-label", "Navigasi utama");
     mainNav.innerHTML = `
-      <a href="inventory.html">Inventory</a>
-      <a href="find-car.html">Find My Car</a>
-      <a href="select-programme.html">Select Programme</a>
-      <a href="about.html">About</a>
-      <a href="contact.html">Contact</a>
-      <a class="tool-nav-link" href="calculator.html">Tools</a>`;
+      <a href="/inventory">Stock Inventory</a>
+      <a href="/select-programme">Izuwan Select</a>
+      <a href="/calculator">Loan Calculator</a>
+      <a href="/contact">Showroom Location</a>`;
   }
   const footerNav = document.querySelector(".site-footer nav");
   if (footerNav) {
     footerNav.innerHTML = `
-      <a href="inventory.html">Inventory</a>
-      <a href="about.html">About</a>
-      <a href="select-programme.html">Select Programme</a>
-      <a href="contact.html">Contact</a>
-      <a href="privacy.html">Privacy</a>
-      <a href="terms.html">Terms</a>`;
+      <a href="/inventory">Inventory</a>
+      <a href="/about">About</a>
+      <a href="/select-programme">Izuwan Select</a>
+      <a href="/contact">Showroom</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>`;
     footerNav.setAttribute("aria-label", "Navigasi footer");
   }
   $("menuButton")?.setAttribute("aria-controls", "siteNav");
 
   $("themeButton")?.addEventListener("click", () => {
     const theme = document.body.classList.contains("light") ? "dark" : "light";
-    localStorage.setItem("iasb-theme", theme);
+    try { localStorage.setItem("iasb-theme", theme); } catch {}
     applyTheme(theme);
   });
 
@@ -93,8 +98,10 @@
   });
 
   document.querySelectorAll("#siteNav a").forEach(link => {
-    const current = location.pathname.split("/").pop() || "index.html";
-    const target = link.getAttribute("href").split("#")[0] || "index.html";
+    const current = ({ "car.html": "inventory.html", "otr.html": "calculator.html", "model-guides.html": "calculator.html" })[pageFile()] || pageFile();
+    const targetPath = link.getAttribute("href").split("#")[0];
+    const targetName = targetPath.split("/").filter(Boolean).pop() || "index";
+    const target = targetName.endsWith(".html") ? targetName : `${targetName}.html`;
     link.classList.toggle("active", current === target);
     if (current === target) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
@@ -103,6 +110,20 @@
       $("menuButton")?.setAttribute("aria-expanded", "false");
     });
   });
+
+  function cleanInternalLinks(root = document) {
+    const links = [...(root.matches?.('a[href]') ? [root] : []), ...(root.querySelectorAll?.('a[href]') || [])];
+    links.forEach(link => {
+      const href = link.getAttribute('href');
+      if (!href || /^(?:[a-z]+:|#|\/\/)/i.test(href)) return;
+      const clean = cleanPath(href);
+      if (clean !== href) link.setAttribute('href', clean);
+    });
+  }
+  cleanInternalLinks();
+  new MutationObserver(entries => entries.forEach(entry => entry.addedNodes.forEach(node => {
+    if (node.nodeType === 1) cleanInternalLinks(node);
+  }))).observe(document.body, { childList: true, subtree: true });
 
   document.addEventListener("keydown", event => {
     if (event.key !== "Escape" || !$("siteNav")?.classList.contains("open")) return;
@@ -115,7 +136,7 @@
   quickActions.className = "quick-actions";
   quickActions.innerHTML = `
     <a class="floating-whatsapp" data-floating-whatsapp target="_blank" rel="noopener" aria-label="WhatsApp Izuwan Automobile">
-      <span>WhatsApp</span><b>↗</b>
+      <i class="floating-status" aria-hidden="true"></i><span><small>ONLINE SEKARANG</small>Sembang dengan Advisor</span><b>↗</b>
     </a>
     <button class="back-to-top" type="button" aria-label="Kembali ke atas">↑</button>`;
   document.body.appendChild(quickActions);
@@ -123,7 +144,7 @@
   const mobileActions = document.createElement("nav");
   mobileActions.className = "mobile-action-bar";
   mobileActions.setAttribute("aria-label", "Navigasi utama mudah alih");
-  const currentPage = location.pathname.split("/").pop() || "index.html";
+  const currentPage = pageFile();
   const mobileMessage = currentPage === "contact.html"
     ? "Hai, saya ingin buat temu janji untuk melawat HQ Izuwan Automobile di Taman Wahyu."
     : currentPage === "select-programme.html"
@@ -146,11 +167,11 @@
     tools: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.2"/><path d="M7.5 7.2h9M8 11h1M12 11h1M16 11h1M8 14.5h1M12 14.5h1M16 14.5h1M8 18h1M12 18h1M16 18h1"/></svg>`
   };
   const mobileItems = [
-    { key: "home", href: "index.html", label: "Home" },
-    { key: "stock", href: "inventory.html", label: "Stock" },
+    { key: "home", href: "/", label: "Home" },
+    { key: "stock", href: "/inventory", label: "Stock" },
     { key: "whatsapp", label: "WhatsApp", primary: true },
-    { key: "find", href: "find-car.html", label: "Find Car" },
-    { key: "tools", href: "calculator.html", label: "Tools" }
+    { key: "find", href: "/find-car", label: "Find Car" },
+    { key: "tools", href: "/calculator", label: "Tools" }
   ];
   mobileActions.innerHTML = mobileItems.map(item => {
     const isActive = item.key === activeMobileItem;
