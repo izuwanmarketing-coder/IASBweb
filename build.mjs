@@ -2,7 +2,9 @@ import { cp, mkdir, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 
 const dist = new URL("./dist/", import.meta.url);
+const directories = [];
 const files = [
+  "assets/hero-prado.jpg",
   "_headers",
   "_redirects",
   "_worker.js",
@@ -33,6 +35,8 @@ const files = [
   "find-car.html",
   "home-page.js",
   "index.html",
+  "izuwan.css",
+  "vehicle-card.js",
   "inventory-page.js",
   "inventory.html",
   "inventory.js",
@@ -66,6 +70,9 @@ if (existsSync(dist)) {
 }
 
 await mkdir(dist, { recursive: true });
+for (const directory of directories) {
+  await mkdir(new URL(`./dist/${directory}`, import.meta.url), { recursive: true });
+}
 
 for (const file of files) {
   await cp(new URL(`./${file}`, import.meta.url), new URL(`./dist/${file}`, import.meta.url), { recursive: true });
