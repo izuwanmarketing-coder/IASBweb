@@ -46,7 +46,7 @@
     const opts = options || {};
     if (!hasValidPrice(car.price)) {
       return `<strong class="price-poa">Harga di pengesahan</strong>
-        <small>Incoming / port unit — WhatsApp untuk anggaran landing</small>`;
+          <small>Incoming / port unit. WhatsApp untuk anggaran landing</small>`;
     }
     const monthly = window.IASBSite?.monthlyEstimate
       ? window.IASBSite.monthlyEstimate(car.price)
@@ -88,7 +88,7 @@
     const grade = car.grade && car.mileage ? "" : (car.grade ? `<span>Grade ${safeText(car.grade)}</span>` : "");
     const photoCount = gallery.length > 1 ? `<span>${gallery.length} gambar</span>` : "";
     const photoContent = photo
-      ? `<img src="${safeText(photo)}" alt="${safeText(name)}${car.year ? " " + safeText(car.year) : ""} — gambar unit" loading="lazy" decoding="async">`
+        ? `<img src="${safeText(photo)}" alt="${safeText(name)}${car.year ? " " + safeText(car.year) : ""}, gambar unit" loading="lazy" decoding="async">`
       : `<div class="vehicle-placeholder">${safeText((car.brand || "IZUWAN").slice(0, 12).toUpperCase())}</div>`;
     const mediaTag = opts.photoAdvance && photo
       ? `<a class="vehicle-media" href="${detailHref}" aria-label="Lihat ${safeText(name)}">${photoContent}${photoCount}</a>`

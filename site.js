@@ -66,7 +66,11 @@
     { label: "Inventory", href: "/inventory", match: ["inventory.html", "car.html"] },
     { label: "Izuwan Select", href: "/select-programme", match: ["select-programme.html"] },
     { label: "Find My Car", href: "/find-car", match: ["find-car.html"] },
-    { label: "Tools", href: "/calculator", match: ["calculator.html", "otr.html", "model-guides.html"] },
+    { label: "Tools", href: "/calculator", match: ["calculator.html", "otr.html", "model-guides.html"], children: [
+      { label: "Loan Calculator", href: "/calculator", match: "calculator.html" },
+      { label: "OTR Calculator", href: "/otr", match: "otr.html" },
+      { label: "Model Guides", href: "/model-guides", match: "model-guides.html" }
+    ] },
     { label: "Showroom", href: "/contact", match: ["contact.html"] }
   ];
 
@@ -74,13 +78,13 @@
     const mainNav = $("siteNav") || $("mainNav");
     if (mainNav) {
       mainNav.setAttribute("aria-label", "Navigasi utama");
-      mainNav.innerHTML = NAV_LINKS.map(link =>
-        `<a href="${link.href}">${link.label}</a>`
+      mainNav.innerHTML = NAV_LINKS.map(link => link.children
+        ? `<details class="nav-tools"><summary>${link.label}</summary><div>${link.children.map(child => `<a href="${child.href}" data-match="${child.match}">${child.label}</a>`).join("")}</div></details>`
+        : `<a href="${link.href}" data-match="${link.match.join(",")}">${link.label}</a>`
       ).join("");
       const current = pageFile();
       mainNav.querySelectorAll("a").forEach(link => {
-        const target = NAV_LINKS.find(item => item.href === link.getAttribute("href").replace(/\.html$/, "") || item.href === link.getAttribute("href"));
-        const isCurrent = target && target.match.includes(current);
+        const isCurrent = String(link.dataset.match || "").split(",").includes(current);
         link.classList.toggle("active", isCurrent);
         if (isCurrent) link.setAttribute("aria-current", "page");
         else link.removeAttribute("aria-current");
@@ -90,8 +94,11 @@
           if (button) button.setAttribute("aria-expanded", "false");
         });
       });
+      const tools = mainNav.querySelector(".nav-tools");
+      if (tools) tools.classList.toggle("active", ["calculator.html", "otr.html", "model-guides.html"].includes(current));
     }
-    const footerNav = document.querySelector(".site-footer nav");
+    const footer = document.querySelector("footer");
+    const footerNav = footer?.querySelector("nav");
     if (footerNav) {
       footerNav.setAttribute("aria-label", "Navigasi footer");
       footerNav.innerHTML = `
@@ -101,6 +108,12 @@
         <a href="/contact">Showroom</a>
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>`;
+    }
+    if (footer && !footer.querySelector(".site-footer-contact")) {
+      const footerContact = document.createElement("div");
+      footerContact.className = "site-footer-contact";
+      footerContact.innerHTML = `<div><strong>HQ Taman Wahyu</strong><address>Lot 65419, Jalan Kuching, Mukim Batu, 51200 Kuala Lumpur</address><span>Setiap hari, 9:00 pagi hingga 7:00 malam</span></div><div class="site-footer-actions"><a href="tel:+60192788667">Telefon</a><a data-footer-whatsapp target="_blank" rel="noopener">WhatsApp</a><a href="https://waze.com/ul?q=Lot%2065419%2C%20Jalan%20Kuching%2C%20Mukim%20Batu%2C%2051200%20Kuala%20Lumpur&navigate=yes" target="_blank" rel="noopener">Waze</a></div><small>SSM 201501006923 (1132255-W)</small>`;
+      footer.prepend(footerContact);
     }
     const menuButton = $("menuButton") || document.querySelector(".site-header .menu-button");
     if (menuButton && mainNav) {
@@ -309,6 +322,9 @@
       });
       document.querySelectorAll("[data-mobile-whatsapp]").forEach(link => {
         link.href = this.whatsappUrl(link.dataset.whatsappMessage || "Hai, saya ingin bertanya tentang kereta di Izuwan Automobile.");
+      });
+      document.querySelectorAll("[data-footer-whatsapp]").forEach(link => {
+        link.href = this.whatsappUrl("Hai, saya ingin bercakap dengan advisor Izuwan Automobile.");
       });
 
       const liveEvent = (events || []).find(eventIsLive);

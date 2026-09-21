@@ -25,6 +25,12 @@
     ? `${Math.round(Number(value)).toLocaleString("en-MY")} km`
     : "";
 
+  const usableDescription = value => {
+    const text = String(value || "").trim();
+    if (!text || /^(?:tba|n\/?a|na|null|none|pending|-+)$/i.test(text)) return "";
+    return text;
+  };
+
   function formatUpdated(value) {
     if (!value) return "";
     const date = new Date(value);
@@ -87,11 +93,11 @@
 
   function renderGallery(photos, title) {
     if (!photos.length) {
-      return `<div class="car-detail-placeholder"><span>IA</span><p>Gambar unit ini akan dikemaskini — minta gambar terkini melalui WhatsApp.</p></div>`;
+      return `<div class="car-detail-placeholder"><span>IA</span><p>Foto unit sedang dikemas kini.<br>Minta set foto sebenar daripada advisor.</p></div>`;
     }
     return `<button class="car-main-image-button" id="openCarImage" type="button" aria-label="Buka galeri ${safeText(title)} dalam skrin penuh">
         <img class="car-main-image" id="carMainImage" src="${safeText(photos[0])}" alt="${safeText(title)}, gambar 1 daripada ${photos.length}">
-        <span class="car-image-expand">Lihat gambar penuh <b>↗</b></span>
+        <span class="car-image-expand">Lihat gambar penuh</span>
       </button>
       ${photos.length > 1 ? `<div class="car-thumbs" aria-label="Pilihan gambar">${photos.slice(0, 12).map((src, index) => `<button type="button" data-car-thumb-index="${index}" class="${index === 0 ? "active" : ""}" aria-label="Lihat gambar ${index + 1} daripada ${photos.length}"><img src="${safeText(src)}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}`;
   }
@@ -100,7 +106,7 @@
     /* Structured "Kenapa unit ini" — auto-composed from real fields only (spec §3.2). */
     const lines = [];
     const name = `${car.brand || ""} ${car.model || ""}`.trim();
-    if (car.grade) lines.push(`Unit ini tiba dengan auction grade ${safeText(car.grade)} — keadaan asal Jepun direkodkan dalam laporan lelongan.`);
+    if (car.grade) lines.push(`Auction grade ${safeText(car.grade)} merekodkan keadaan unit ketika dinilai di Jepun.`);
     if (Number(car.mileage) > 0 && car.year) {
       const age = Math.max(1, new Date().getFullYear() - Number(car.year));
       const perYear = Math.round(Number(car.mileage) / age);
@@ -108,8 +114,9 @@
     } else if (Number(car.mileage) > 0) {
       lines.push(`Odometer ${mileageText(car.mileage)}.`);
     }
-    if (car.description) lines.push(safeText(car.description));
-    if (car.location) lines.push(`Unit ini berada di ${safeText(car.location)} — boleh dilihat hari ini dalam waktu operasi showroom.`);
+    const description = usableDescription(car.description);
+    if (description) lines.push(safeText(description));
+    if (car.location) lines.push(`Unit berada di ${safeText(car.location)} dan viewing boleh diatur bersama advisor.`);
     if (!lines.length) return "";
     return `<div class="car-story"><span class="eyebrow">KENAPA UNIT INI</span><p>${lines.join(" ")}</p></div>`;
   }
@@ -117,7 +124,7 @@
   function evidenceStrip(car, title) {
     const auction = car.auction_report
       ? { cls: "verified", tag: "AVAILABLE", text: "Laporan lelongan tersedia untuk semakan bersama advisor." }
-      : { cls: "confirm", tag: "PENGESAHAN", text: "Status report belum dinyatakan — minta advisor semak untuk anda." };
+      : { cls: "confirm", tag: "PENGESAHAN", text: "Status laporan belum dinyatakan. Minta advisor semak untuk anda." };
     const mileage = car.mileage_verified
       ? { cls: "verified", tag: "VERIFIED", text: `${mileageText(car.mileage)} ditandakan telah disahkan.` }
       : { cls: "confirm", tag: "PENGESAHAN", text: mileageText(car.mileage) ? "Mileage dipaparkan; minta pengesahan advisor." : "Mileage akan disahkan bersama advisor." };
@@ -130,7 +137,7 @@
       <article class="${grade.cls}"><small>${grade.tag}</small><strong>Grade & condition</strong><span>${safeText(grade.text)}</span></article>
     </section>
     <div class="evidence-cta">
-      <a href="${window.IASBSite.whatsappUrl(`[Car Detail Page] Hai, boleh share auction sheet / report untuk ${title}?`)}" target="_blank" rel="noopener" data-lead-action="car_sheet_request" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(title)}">Minta auction sheet melalui WhatsApp ↗</a>
+      <a href="${window.IASBSite.whatsappUrl(`[Car Detail Page] Hai, boleh share auction sheet / report untuk ${title}?`)}" target="_blank" rel="noopener" data-lead-action="car_sheet_request" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(title)}">Minta auction sheet melalui WhatsApp</a>
     </div>`;
   }
 
@@ -141,7 +148,7 @@
     const similar = [...sameModel, ...sameType, ...priceBand].slice(0, 3);
     if (!similar.length) return "";
     return `<section class="similar-stock">
-      <div class="section-heading"><div><span class="eyebrow">SIMILAR READY STOCK</span><h2>You may also like.</h2></div><a class="section-link" href="inventory.html">View all →</a></div>
+      <div class="section-heading"><div><span class="eyebrow">PILIHAN BERKAITAN</span><h2>Bandingkan unit seterusnya.</h2></div><a class="section-link" href="inventory.html">Lihat semua unit</a></div>
       <div class="similar-grid">${similar.map(item => {
         const href = item.id ? `car.html?id=${encodeURIComponent(item.id)}` : `inventory.html`;
         const state = statusInfo(item.status);
@@ -229,22 +236,22 @@
           ${validPrice
             ? `<em>± ${money(monthly)}/bulan <b class="tenure">(${assumptions.depositPct}% deposit · ${assumptions.years} tahun · ${assumptions.rate}% p.a. anggaran)</b></em>
                <small class="car-price-note">Anggaran kadar rata. Tertakluk kepada kelulusan bank, CCRIS/CTOS dan dokumen. Insurance dan OTR disahkan bersama advisor.</small>`
-            : `<em>Unit incoming / di pelabuhan — WhatsApp advisor untuk anggaran landing price terkini.</em>`}
-          ${validPrice ? `<a class="car-price-calc" href="calculator.html?price=${Number(car.price) || 0}&car=${encodeURIComponent(title)}" data-lead-action="car_calculator" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(title)}">Kira tepat dalam kalkulator →</a>` : ""}
+            : `<em>Unit incoming atau di pelabuhan. WhatsApp advisor untuk anggaran landing price terkini.</em>`}
+          ${validPrice ? `<a class="car-price-calc" href="calculator.html?price=${Number(car.price) || 0}&car=${encodeURIComponent(title)}" data-lead-action="car_calculator" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(title)}">Kira ansuran tepat</a>` : ""}
+        </div>
+        <div class="car-detail-actions">
+          <a href="${window.IASBSite.whatsappUrl(whatsappMessage)}" data-lead-action="car_whatsapp" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(title)}" target="_blank" rel="noopener">Tanya advisor di WhatsApp</a>
+          <a class="outline" href="#viewingForm">Atur viewing</a>
+          <a class="ghost" href="inventory.html">Kembali ke inventory</a>
         </div>
         <div class="car-spec-grid">${specs}</div>
-        <div class="car-detail-actions">
-          <a href="${window.IASBSite.whatsappUrl(whatsappMessage)}" data-lead-action="car_whatsapp" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(title)}" target="_blank" rel="noopener">WhatsApp enquiry <span aria-hidden="true">↗</span></a>
-          <a class="outline" href="#paymentEstimator">Estimate monthly</a>
-          <a class="ghost" href="inventory.html">Back to inventory</a>
-        </div>
       </article>
     </section>
     <section class="car-detail-tools">
       ${validPrice ? `<form class="payment-estimator" id="paymentEstimator">
         <span class="eyebrow">PAYMENT ESTIMATOR</span>
         <h2>Quick monthly estimate.</h2>
-        <p class="estimator-note">Edit deposit dan tenure. Kadar kekal anggaran default — kadar sebenar bergantung kepada bank.</p>
+        <p class="estimator-note">Ubah deposit dan tempoh. Kadar ini anggaran awal, kadar sebenar bergantung kepada bank.</p>
         <div class="form-grid">
           <label>Downpayment (RM)<input id="estimateDownpayment" type="number" min="0" value="${defaultDownpayment}"></label>
           <label>Tenure<select id="estimateYears"><option value="5">5 years</option><option value="7">7 years</option><option value="9" selected>9 years</option></select></label>
@@ -255,12 +262,12 @@
       <form class="viewing-card" id="viewingForm">
         <span class="eyebrow">VIEWING SLOT</span>
         <h2>Book a showroom viewing.</h2>
-        <p class="estimator-note">Pilih tarikh — advisor sahkan slot dalam 1 jam waktu operasi. Unit ini di ${safeText(car.location || "showroom kami")}.</p>
+        <p class="estimator-note">Pilih tarikh dan masa. Advisor akan mengesahkan slot dalam waktu operasi. Unit ini di ${safeText(car.location || "showroom kami")}.</p>
         <div class="form-grid">
           <label>Date<input id="viewingDate" type="date"></label>
           <label>Preferred time<select id="viewingTime"><option>Morning</option><option>Afternoon</option><option>Evening</option></select></label>
         </div>
-        <button type="submit">WhatsApp viewing request <span aria-hidden="true">↗</span></button>
+        <button type="submit">Hantar permintaan viewing</button>
       </form>
     </section>
     ${evidenceStrip(car, title)}
@@ -274,6 +281,21 @@
       mobileWhatsapp.setAttribute("aria-label", `Enquire about ${title} on WhatsApp`);
       const label = mobileWhatsapp.querySelector("b");
       if (label) label.textContent = "Enquire";
+    }
+
+    document.querySelector(".car-mobile-cta")?.remove();
+    const mobileCta = document.createElement("nav");
+    mobileCta.className = "car-mobile-cta";
+    mobileCta.setAttribute("aria-label", "Tindakan untuk unit ini");
+    mobileCta.innerHTML = `<a class="car-mobile-whatsapp" href="${window.IASBSite.whatsappUrl(whatsappMessage)}" target="_blank" rel="noopener">WhatsApp advisor</a><a class="car-mobile-viewing" href="#viewingForm">Atur viewing</a>`;
+    document.body.appendChild(mobileCta);
+    const priceBlock = root.querySelector(".car-detail-price");
+    if (priceBlock && "IntersectionObserver" in window) {
+      const ctaObserver = new IntersectionObserver(entries => {
+        const entry = entries[0];
+        mobileCta.classList.toggle("is-visible", !entry.isIntersecting && entry.boundingClientRect.top < 0);
+      }, { threshold: 0 });
+      ctaObserver.observe(priceBlock);
     }
 
     /* Grade explainer dialog (spec §3.5 / §3.11) */
@@ -291,13 +313,13 @@
             <h2>Apakah maksud gred auction?</h2>
             <p>Setiap unit recond Izuwan dihargai berdasarkan laporan lelongan Jepun. Gred keseluruhan mencerminkan keadaan asal kenderaan:</p>
             <dl class="grade-scale">
-              <div><b>5 / 5A</b><dd>Keadaan hampir baru — mileage sangat rendah, tiada tanda pembaikan ketara.</dd></div>
+              <div><b>5 / 5A</b><dd>Keadaan hampir baru, mileage sangat rendah dan tiada tanda pembaikan ketara.</dd></div>
               <div><b>4.5 / 4.5B</b><dd>Keadaan sangat baik. Huruf B bermaksud terdapat tanda kecil yang telah direkodkan (bukan kemalangan berat).</dd></div>
-              <div><b>4 / 4B</b><dd>Keadaan baik dengan penggunaan biasa — tanda kecil kosmetik direkodkan dalam sheet.</dd></div>
-              <div><b>3.5 / 3</b><dd>Keadaan sederhana — lebih banyak tanda penggunaan atau pembaikan kecil.</dd></div>
-              <div><b>R / RA</b><dd>Unit dengan sejarah pembaikan kemalangan. Izuwan hanya membawa grade tinggi dan menerangkan setiap notation kepada anda.</dd></div>
+              <div><b>4 / 4B</b><dd>Keadaan baik dengan penggunaan biasa. Tanda kecil kosmetik direkodkan dalam sheet.</dd></div>
+              <div><b>3.5 / 3</b><dd>Keadaan sederhana dengan lebih banyak tanda penggunaan atau pembaikan kecil.</dd></div>
+              <div><b>R / RA</b><dd>Unit dengan sejarah pembaikan kemalangan. Advisor perlu menerangkan setiap notation sebelum anda membuat keputusan.</dd></div>
             </dl>
-            <p class="fine-print">Minta auction sheet sebenar untuk unit ini melalui WhatsApp — kami kongsi laporan asal sebelum anda membuat keputusan.</p>
+            <p class="fine-print">Minta auction sheet sebenar untuk unit ini melalui WhatsApp. Semak laporan asal sebelum anda membuat keputusan.</p>
             <div class="grade-dialog-actions">
               <a class="button-whatsapp" href="${window.IASBSite.whatsappUrl(`[Car Detail Page] Hai, boleh terangkan auction sheet untuk ${title}?`)}" target="_blank" rel="noopener">Minta sheet via WhatsApp</a>
             </div>`;

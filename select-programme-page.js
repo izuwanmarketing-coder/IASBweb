@@ -23,4 +23,10 @@
     });
     window.open(window.IASBSite.whatsappUrl(message), "_blank", "noopener");
   });
+
+  window.addEventListener("iasb:data", event => {
+    const advisor = (event.detail.salesmen || []).find(item => item.is_active !== false && item.name);
+    const name = document.getElementById("selectAdvisorName");
+    if (advisor && name) name.textContent = advisor.name;
+  });
 })();

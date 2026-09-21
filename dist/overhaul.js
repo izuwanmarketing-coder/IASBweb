@@ -22,7 +22,7 @@
     const live = (inventory || []).filter(car => car && car.is_active !== false);
     const units = live.reduce((sum, car) => sum + (Number(car.units) || 1), 0);
     const pricelist = settings?.pricelist_date || live.find(car => car.campaign_tag)?.campaign_tag?.replace("PRICELIST ", "") || "";
-    chip.innerHTML = `<i aria-hidden="true"></i><b>${units ? units.toLocaleString("en-MY") : "—"} unit</b> ready stock${pricelist ? ` · PRICELIST ${safe(pricelist)}` : ""}`;
+    chip.innerHTML = `<i aria-hidden="true"></i><b>${units ? units.toLocaleString("en-MY") : "-"} unit</b> ready stock${pricelist ? ` · PRICELIST ${safe(pricelist)}` : ""}`;
   }
 
   /* Featured collection: managed featured first, then photographic

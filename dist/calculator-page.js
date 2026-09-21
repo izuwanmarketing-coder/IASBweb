@@ -22,8 +22,8 @@
     const missingSalary = Number($("salary").value) <= 0;
     ["copyButton", "whatsappButton"].forEach(id => $(id).disabled = invalid || missingSalary);
     if (invalid || missingSalary) {
-      $("monthlyBudget").textContent = "—";
-      ["maxPrice", "loanAmount", "finalDsr", "depositAmount"].forEach(id => $(id).textContent = "—");
+      $("monthlyBudget").textContent = "-";
+      ["maxPrice", "loanAmount", "finalDsr", "depositAmount"].forEach(id => $(id).textContent = "-");
       $("resultBadge").textContent = "SEMAK INPUT";
       $("resultBadge").classList.add("warning");
       $("resultDescription").textContent = "Masukkan gaji melebihi sifar dan nilai yang sah sebelum membuat anggaran.";

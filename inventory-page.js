@@ -97,7 +97,9 @@
     }
     stats.classList.remove("hidden");
     $("inventoryCount").textContent = filtered.length.toLocaleString("en-MY");
-    $("unitCount").textContent = filtered.reduce((sum, car) => sum + (Number(car.units) || 1), 0).toLocaleString("en-MY");
+    $("unitCount").textContent = filtered
+      .filter(car => !["SOLD", "BOOKED", "RESERVED"].includes(String(car.status || "").toUpperCase()))
+      .reduce((sum, car) => sum + (Number(car.units) || 1), 0).toLocaleString("en-MY");
     $("locationCount").textContent = new Set(cars.map(car => car.location).filter(Boolean)).size.toLocaleString("en-MY");
   }
 
@@ -149,7 +151,7 @@
 
     renderStats(filtered);
     const activeFilterCount = [brand, locationName, status, budget].filter(value => value !== "all").length + (sortMode !== "latest" ? 1 : 0);
-    $("filterSummaryLabel").textContent = activeFilterCount ? `Filters (${activeFilterCount})` : "More filters";
+    $("filterSummaryLabel").textContent = activeFilterCount ? `Filter aktif (${activeFilterCount})` : "Tapis lanjut";
     $("filterSummaryHint").textContent = activeFilterCount ? "Tap untuk ubah atau reset" : "Brand, lokasi, status, bajet & susunan";
     const assumptions = window.IASBSite?.financeAssumptions() || { depositPct: 10, years: 9, rate: 3.2 };
     $("inventorySummary").textContent = `${filtered.length} pilihan ditemui. Anggaran ansuran menggunakan deposit ${assumptions.depositPct}%, ${assumptions.years} tahun dan kadar ${assumptions.rate}% setahun.`;
@@ -174,7 +176,7 @@
         : "")
       : `<div class="empty-state">
           <strong>Tiada stok sepadan</strong>
-          <span>Filter ini yang buat hasil kosong: ${window.IASBCards.safeText(chips.map(([, label]) => label).join(", ") || "—")}. Cuba buang filter, atau beritahu kami spesifikasi yang anda cari.</span>
+          <span>Filter ini yang buat hasil kosong: ${window.IASBCards.safeText(chips.map(([, label]) => label).join(", ") || "tiada")}. Cuba buang filter, atau beritahu kami spesifikasi yang anda cari.</span>
           <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px">
             <button type="button" class="filter" data-clear-all>Buang semua filter</button>
             <a class="filter" style="background:var(--accent);border-color:var(--accent);color:#fff;text-decoration:none" href="${window.IASBSite.whatsappUrl("[Inventory Page] Hai, saya cari kereta dengan spesifikasi tertentu. Boleh bantu semak?")}" target="_blank" rel="noopener">Tanya advisor</a>
