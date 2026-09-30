@@ -76,7 +76,9 @@
 
   function applyNav() {
     document.querySelectorAll('.site-header .brand, footer .brand').forEach(brand => {
-      brand.innerHTML = '<img class="official-brand-logo" src="/assets/company-logo.png" alt="Izuwan Automobile — Imported Car Dealer" width="2911" height="1070">';
+      const darkFooter = brand.closest('footer') && document.body.classList.contains('redesign-home');
+      const logo = darkFooter ? 'company-logo.png' : 'company-logo-light.png';
+      brand.innerHTML = `<img class="official-brand-logo" src="/assets/${logo}" alt="Izuwan Automobile — Imported Car Dealer" width="${darkFooter ? 2911 : 2067}" height="${darkFooter ? 1070 : 761}">`;
     });
     const mainNav = $("siteNav") || $("mainNav");
     if (mainNav) {

@@ -6,6 +6,7 @@ const directories = [];
 const files = [
   "assets/hero-prado.jpg",
   "assets/company-logo.png",
+  "assets/company-logo-light.png",
   "_headers",
   "_redirects",
   "_worker.js",

@@ -34,8 +34,9 @@ body.redesign-home{background:var(--paper);color:var(--ink)}
 @media(max-width:600px){.car-detail-panel{padding:21px}.car-detail-panel h1{font-size:30px}.car-detail-price>strong{font-size:34px}.car-detail-actions a{min-height:47px}.car-status-line{gap:8px;flex-wrap:wrap}.car-spec-grid>div{padding:12px 9px}.car-detail-tools h2{font-size:25px}.car-mobile-cta{bottom:calc(70px + env(safe-area-inset-bottom))}.car-detail-main{padding-bottom:150px}}
 /* Preserve the original full company logo on its intended dark background. */
 .site-header .brand,footer .brand{flex-shrink:0;opacity:1}
-.official-brand-logo{display:block;width:220px;height:auto;max-width:100%;background:#000;border-radius:3px;padding:7px;object-fit:contain}
+.official-brand-logo{display:block;width:220px;height:auto;max-width:100%;background:transparent;border-radius:0;padding:0;object-fit:contain}
 .redesign-home .footer-top .brand{display:flex}
 footer .official-brand-logo{width:250px}
 @media(max-width:900px){.site-header .official-brand-logo{width:190px}}
 @media(max-width:600px){.site-header .official-brand-logo{width:180px}.site-header,.site-header.scrolled{min-height:82px}footer .official-brand-logo{width:230px}}
+.site-header .official-brand-logo{background:transparent;padding:0;border-radius:0}
