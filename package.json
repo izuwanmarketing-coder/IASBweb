@@ -3,11 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node scripts/preview.mjs",
+    "build": "node build.mjs",
+    "start": "node scripts/preview.mjs --dist",
     "build:static": "node build.mjs",
-    "lint": "next lint"
+    "lint": "node scripts/check-public.mjs",
+    "test": "node --test tests/*.test.cjs",
+    "media:dev": "next dev",
+    "media:build": "next build",
+    "media:start": "next start"
   },
   "dependencies": {
     "@types/node": "^20.14.10",

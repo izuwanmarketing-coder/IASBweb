@@ -5,6 +5,7 @@ const dist = new URL("./dist/", import.meta.url);
 const directories = [];
 const files = [
   "assets/hero-prado.jpg",
+  "assets/company-logo.png",
   "_headers",
   "_redirects",
   "_worker.js",
@@ -36,6 +37,7 @@ const files = [
   "home-page.js",
   "index.html",
   "izuwan.css",
+  "redesign.css",
   "vehicle-card.js",
   "inventory-page.js",
   "inventory.html",

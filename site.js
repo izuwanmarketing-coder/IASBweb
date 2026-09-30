@@ -75,6 +75,9 @@
   ];
 
   function applyNav() {
+    document.querySelectorAll('.site-header .brand, footer .brand').forEach(brand => {
+      brand.innerHTML = '<img class="official-brand-logo" src="/assets/company-logo.png" alt="Izuwan Automobile — Imported Car Dealer" width="2911" height="1070">';
+    });
     const mainNav = $("siteNav") || $("mainNav");
     if (mainNav) {
       mainNav.setAttribute("aria-label", "Navigasi utama");
@@ -140,7 +143,7 @@
     links.forEach(link => {
       const href = link.getAttribute('href');
       if (!href || /^(?:[a-z]+:|#|\/\/)/i.test(href)) return;
-      const clean = cleanPath(href);
+      const clean = cleanPath(href) || "/";
       if (clean !== href) link.setAttribute('href', clean);
     });
   }
@@ -201,7 +204,7 @@
     quickActions.innerHTML = `
       <a class="floating-whatsapp" data-floating-whatsapp target="_blank" rel="noopener" aria-label="WhatsApp Izuwan Automobile">
         <span class="advisor-avatar" aria-hidden="true">IA<i></i></span>
-        <span><small>ONLINE SEKARANG</small><b>Sembang dengan Advisor</b></span>
+        <span><small>SOALAN TENTANG KERETA?</small><b>Sembang dengan Advisor</b></span>
       </a>
       <button class="back-to-top" type="button" aria-label="Kembali ke atas">↑</button>`;
     document.body.appendChild(quickActions);
@@ -373,15 +376,40 @@
 
   window.IASBSite.applyManagedData(null, [], []);
 
-  (async function loadSharedData() {
-    try {
-      if (!window.IASBData?.configured && !window.IASBData?.sheetConfigured) return;
-      const managed = await window.IASBData.loadPublicData();
-      window.IASBSite.applyManagedData(managed.settings, managed.salesmen, managed.events);
-      window.dispatchEvent(new CustomEvent("iasb:data", { detail: managed }));
-    } catch (error) {
-      console.warn("Managed site data unavailable.", error);
-      window.dispatchEvent(new CustomEvent("iasb:error", { detail: { error } }));
-    }
-  })();
+  /* Share a single request with homepage consumers; late subscribers can use
+     the same promise instead of missing iasb:data or fetching everything twice. */
+  let managedDataRequest = null;
+  let managedDataPending = false;
+  window.IASBSite.loadManagedData = function ({ force = false } = {}) {
+    if (managedDataRequest && (!force || managedDataPending)) return managedDataRequest;
+    managedDataPending = true;
+    managedDataRequest = (async () => {
+      let timeout;
+      try {
+        if (!window.IASBData?.configured && !window.IASBData?.sheetConfigured) throw new Error("Inventory source unavailable");
+        const managed = await Promise.race([
+          window.IASBData.loadPublicData(),
+          new Promise((_, reject) => {
+            timeout = window.setTimeout(() => reject(new Error("Inventory request timed out")), 15000);
+          })
+        ]);
+        window.IASBSite.applyManagedData(managed.settings, managed.salesmen, managed.events);
+        window.dispatchEvent(new CustomEvent("iasb:data", { detail: managed }));
+        return managed;
+      } catch (error) {
+        console.warn("Managed site data unavailable.", error);
+        window.dispatchEvent(new CustomEvent("iasb:error", { detail: { error } }));
+        throw error;
+      } finally {
+        window.clearTimeout(timeout);
+        managedDataPending = false;
+      }
+    })();
+    return managedDataRequest;
+  };
+  if (window.IASBData?.configured || window.IASBData?.sheetConfigured) {
+    // Event subscribers handle failures; prevent an unhandled rejection when
+    // a page has no promise-based consumer.
+    window.IASBSite.loadManagedData().catch(() => {});
+  }
 })();

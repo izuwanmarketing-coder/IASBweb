@@ -2,6 +2,18 @@
 
 Static production website for Izuwan Automobile, ready for GitHub + Cloudflare Pages.
 
+## Local development and review
+
+Run `npm run dev` (Node.js 20+) and open `http://localhost:4173`. The preview supports clean URLs and reads the existing sanitized public inventory endpoint. No dependency installation is needed for the public-site scripts.
+
+- `npm run lint` validates public JavaScript, local links/assets and HTML IDs
+- `npm test` runs focused inventory/card regressions
+- `npm run build` builds the static public site into `dist/`
+- `npm start` serves the built static site for review
+- The separate Next.js utility is retained under `npm run media:dev`, `media:build`, and `media:start`
+
+See `REVIEW.md` for redesign scope and review boundaries.
+
 ## Cloudflare Pages settings
 
 Use these exact settings:

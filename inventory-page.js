@@ -23,10 +23,10 @@
   let visibleLimit = 12;
   let activeGallery = null;
   let activePhoto = 0;
+  let lastManagedData = null;
 
   const TYPES = ["all", "MPV", "SUV", "Sedan", "Hatchback", "Performance", "Coupe", "Convertible", "Mini MPV"];
   const TYPE_LABELS = { all: "Semua", "Mini MPV": "Mini MPV" };
-  const money = value => `RM ${Math.round(Number(value) || 0).toLocaleString("en-MY")}`;
   const hasValidPrice = window.IASBCards?.hasValidPrice || (value => Number(value) >= 10000);
   const monthlyEstimate = value => window.IASBSite?.monthlyEstimate(value)
     ?? Math.round((((Number(value) || 0) * 0.9) * (1 + (0.032 * 9))) / (9 * 12));
@@ -34,14 +34,8 @@
   const identityFor = car => car?._galleryKey
     || (car?.id ? `id:${car.id}` : `source:${car?._fallbackIndex ?? car?._sourceIndex ?? "unknown"}`);
 
-  function fallbackPhotoFor(car) {
-    /* Photo pack is keyed by inventory order; sheet rows without managed
-       photos show the honest placeholder (spec §3.1 rule 1). */
-    return null;
-  }
-
   function photoFor(car) {
-    const managedPhotos = [car.image_url, ...(car.gallery_urls || [])].filter(Boolean);
+    const managedPhotos = window.IASBCards.mediaUrls(car);
     if (managedPhotos.length) {
       const uniquePhotos = [...new Set(managedPhotos)];
       return { photos: uniquePhotos.map(src => ({ src })), folder: uniquePhotos[0] };
@@ -49,26 +43,39 @@
     return null;
   }
 
+  function normalizedStatus(value) {
+    const key = String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
+    if (key === "READY STOCK") return "AVAILABLE";
+    if (key === "RESERVED") return "BOOKED";
+    return key;
+  }
+
+  function isActiveUnit(car) {
+    return car.is_active !== false && !["SOLD", "BOOKED"].includes(normalizedStatus(car.status));
+  }
+
+  function typeMatches(type, car) {
+    if (type === "all") return true;
+    if (type === "Performance") return /amg|type r|gr86|performance|coupe/i.test(`${car.brand} ${car.model} ${car.variant} ${car.type}`);
+    return String(car.type || "Other") === type;
+  }
+
   function renderTypeChips() {
     const container = document.querySelector(".filters.inventory-types");
     if (!container) return;
-    const counts = {};
+    const counts = Object.create(null);
     cars.forEach(car => {
       const type = String(car.type || "Other");
       counts[type] = (counts[type] || 0) + 1;
     });
-    const match = (type, car) => {
-      if (type === "all") return true;
-      if (type === "Performance") return /amg|type r|gr86|performance|coupe/i.test(`${car.brand} ${car.model} ${car.variant} ${car.type}`);
-      return car.type === type;
-    };
-    const isPerformance = car => match("Performance", car);
+    const isPerformance = car => typeMatches("Performance", car);
     if (cars.some(isPerformance)) counts["Performance"] = cars.filter(isPerformance).length;
-    const present = TYPES.filter(type => type === "all" || counts[type]);
+    const present = [...TYPES, ...Object.keys(counts).filter(type => !TYPES.includes(type)).sort()]
+      .filter(type => type === "all" || counts[type]);
     container.innerHTML = present.map(type => {
-      const count = type === "all" ? cars.length : cars.filter(car => match(type, car)).length;
+      const count = type === "all" ? cars.length : cars.filter(car => typeMatches(type, car)).length;
       const label = TYPE_LABELS[type] || type;
-      return `<button class="filter${activeType === type ? " active" : ""}" type="button" data-type="${type}" aria-pressed="${activeType === type}">${label}<span class="filter-count">${count}</span></button>`;
+      return `<button class="filter${activeType === type ? " active" : ""}" type="button" data-type="${window.IASBCards.safeText(type)}" aria-pressed="${activeType === type}">${window.IASBCards.safeText(label)}<span class="filter-count">${count}</span></button>`;
     }).join("");
     container.querySelectorAll("[data-type]").forEach(button => {
       button.addEventListener("click", () => {
@@ -84,9 +91,7 @@
   }
 
   function typeMatcher(car) {
-    if (activeType === "all") return true;
-    if (activeType === "Performance") return /amg|type r|gr86|performance|coupe/i.test(`${car.brand} ${car.model} ${car.variant} ${car.type}`);
-    return car.type === activeType;
+    return typeMatches(activeType, car);
   }
 
   function renderStats(filtered) {
@@ -98,9 +103,9 @@
     stats.classList.remove("hidden");
     $("inventoryCount").textContent = filtered.length.toLocaleString("en-MY");
     $("unitCount").textContent = filtered
-      .filter(car => !["SOLD", "BOOKED", "RESERVED"].includes(String(car.status || "").toUpperCase()))
+      .filter(isActiveUnit)
       .reduce((sum, car) => sum + (Number(car.units) || 1), 0).toLocaleString("en-MY");
-    $("locationCount").textContent = new Set(cars.map(car => car.location).filter(Boolean)).size.toLocaleString("en-MY");
+    $("locationCount").textContent = new Set(filtered.map(car => car.location).filter(Boolean)).size.toLocaleString("en-MY");
   }
 
   function whatsappRecovery() {
@@ -114,6 +119,7 @@
       <span>${kind === "error" ? "CONNECTION NOTICE" : "READY STOCK UPDATE"}</span>
       <h2>${window.IASBCards.safeText(title)}</h2>
       <p>${window.IASBCards.safeText(body)}</p>
+      ${kind === "error" ? `<button type="button" class="filter" data-retry-inventory>Cuba semula</button>` : ""}
       <a href="${whatsappRecovery()}" target="_blank" rel="noopener">${window.IASBCards.safeText(cta)}</a>
     </div>`;
   }
@@ -123,9 +129,17 @@
       if (sortMode === "price-low") return (hasValidPrice(a.price) ? Number(a.price) : Number.MAX_SAFE_INTEGER) - (hasValidPrice(b.price) ? Number(b.price) : Number.MAX_SAFE_INTEGER);
       if (sortMode === "price-high") return (hasValidPrice(b.price) ? Number(b.price) : -1) - (hasValidPrice(a.price) ? Number(a.price) : -1);
       if (sortMode === "monthly-low") return (hasValidPrice(a.price) ? monthlyEstimate(a.price) : Number.MAX_SAFE_INTEGER) - (hasValidPrice(b.price) ? monthlyEstimate(b.price) : Number.MAX_SAFE_INTEGER);
-      if (sortMode === "mileage-low") return (Number(a.mileage) || Number.MAX_SAFE_INTEGER) - (Number(b.mileage) || Number.MAX_SAFE_INTEGER);
+      if (sortMode === "mileage-low") {
+        const mileage = car => car.mileage !== null && car.mileage !== undefined && String(car.mileage).trim() !== "" && Number.isFinite(Number(car.mileage)) && Number(car.mileage) >= 0
+          ? Number(car.mileage) : Number.MAX_SAFE_INTEGER;
+        return mileage(a) - mileage(b);
+      }
+      // Put genuinely photographed, active units first without concealing any
+      // stock. Explicit price / monthly / mileage sorts retain their meaning.
+      const priority = car => (isActiveUnit(car) ? 0 : 2) + (window.IASBCards.mediaSrc(car) ? 0 : 1);
+      const priorityDifference = priority(a) - priority(b);
       const dateDifference = (Date.parse(b.created_at || b.updated_at || "") || 0) - (Date.parse(a.created_at || a.updated_at || "") || 0);
-      return dateDifference || Number(a._sourceIndex || 0) - Number(b._sourceIndex || 0);
+      return priorityDifference || dateDifference || Number(a._sourceIndex || 0) - Number(b._sourceIndex || 0);
     });
   }
 
@@ -144,9 +158,9 @@
       .filter(typeMatcher)
       .filter(car => brand === "all" || car.brand === brand)
       .filter(car => locationName === "all" || car.location === locationName)
-      .filter(car => status === "all" || car.status === status)
+      .filter(car => status === "all" || normalizedStatus(car.status) === status)
       .filter(car => budget === "all" || (hasValidPrice(car.price) && monthlyEstimate(car.price) <= Number(budget)))
-      .filter(car => !query || [car.brand, car.model, car.year, car.grade, car.variant, car.exterior_color, car.interior_color, car.type, car.location, car.status]
+      .filter(car => !query || [car.brand, car.model, car.year, car.grade, car.variant, car.exterior_color, car.interior_color, car.type, car.location, car.status, car.chassis_no, car.marketing_label]
         .join(" ").toLowerCase().includes(query)));
 
     renderStats(filtered);
@@ -154,9 +168,9 @@
     $("filterSummaryLabel").textContent = activeFilterCount ? `Filter aktif (${activeFilterCount})` : "Tapis lanjut";
     $("filterSummaryHint").textContent = activeFilterCount ? "Tap untuk ubah atau reset" : "Brand, lokasi, status, bajet & susunan";
     const assumptions = window.IASBSite?.financeAssumptions() || { depositPct: 10, years: 9, rate: 3.2 };
-    $("inventorySummary").textContent = `${filtered.length} pilihan ditemui. Anggaran ansuran menggunakan deposit ${assumptions.depositPct}%, ${assumptions.years} tahun dan kadar ${assumptions.rate}% setahun.`;
+    $("inventorySummary").textContent = `${filtered.length} pilihan ditemui · ${Math.min(visibleLimit, filtered.length)} dipaparkan.`;
     $("financeAssumption").textContent = `Anggaran ansuran berdasarkan deposit ${assumptions.depositPct}%, ${assumptions.years} tahun dan kadar ${assumptions.rate}% setahun. Tertakluk kepada kelulusan bank.`;
-    const sortLabels = { latest: "Ketibaan terbaru", "price-low": "Harga terendah", "price-high": "Harga tertinggi", "monthly-low": "Ansuran terendah", "mileage-low": "Mileage terendah" };
+    const sortLabels = { latest: "Pilihan utama", "price-low": "Harga terendah", "price-high": "Harga tertinggi", "monthly-low": "Ansuran terendah", "mileage-low": "Mileage terendah" };
     const chips = [
       activeType !== "all" ? ["type", activeType === "Performance" ? "Performance" : activeType] : null,
       searchTerm.trim() ? ["search", `Carian: ${searchTerm.trim()}`] : null,
@@ -214,6 +228,12 @@
     $("photoDriveLink").href = activeGallery.gallery.folder;
   }
 
+  function setSelectValue(id, value) {
+    const select = $(id);
+    select.value = value;
+    select.dispatchEvent(new Event("iasb:select-sync"));
+  }
+
   function bindStaticControls() {
     $("stockSearch").addEventListener("input", event => { visibleLimit = 12; searchTerm = event.target.value; render(); });
     $("brandFilter").addEventListener("change", event => { visibleLimit = 12; brand = event.target.value; render(); });
@@ -228,11 +248,11 @@
       const key = button.dataset.clearFilter;
       if (key === "type") { activeType = "all"; renderTypeChips(); }
       if (key === "search") { searchTerm = ""; $("stockSearch").value = ""; }
-      if (key === "brand") { brand = "all"; $("brandFilter").value = "all"; }
-      if (key === "location") { locationName = "all"; $("locationFilter").value = "all"; }
-      if (key === "status") { status = "all"; $("statusFilter").value = "all"; }
-      if (key === "budget") { budget = "all"; $("budgetFilter").value = "all"; }
-      if (key === "sort") { sortMode = "latest"; $("sortFilter").value = "latest"; }
+      if (key === "brand") { brand = "all"; setSelectValue("brandFilter", "all"); }
+      if (key === "location") { locationName = "all"; setSelectValue("locationFilter", "all"); }
+      if (key === "status") { status = "all"; setSelectValue("statusFilter", "all"); }
+      if (key === "budget") { budget = "all"; setSelectValue("budgetFilter", "all"); }
+      if (key === "sort") { sortMode = "latest"; setSelectValue("sortFilter", "latest"); }
       visibleLimit = 12;
       render();
     });
@@ -248,9 +268,12 @@
       }
     });
     $("carGrid").addEventListener("click", event => {
+      if (event.target.closest("[data-retry-inventory]")) { loadInventory(true); return; }
       if (event.target.closest("[data-load-more]")) {
+        const firstNewCard = visibleLimit + 1;
         visibleLimit += 12;
         render();
+        $("carGrid").querySelector(`.inventory-card:nth-child(${firstNewCard}) .inventory-title-link`)?.focus();
         return;
       }
       const photo = event.target.closest("[data-car-key]");
@@ -273,49 +296,77 @@
     searchTerm = "";
     activeType = brand = locationName = status = budget = "all";
     $("stockSearch").value = "";
-    ["brandFilter", "locationFilter", "statusFilter", "budgetFilter"].forEach(id => $(id).value = "all");
+    ["brandFilter", "locationFilter", "statusFilter", "budgetFilter"].forEach(id => setSelectValue(id, "all"));
     sortMode = "latest";
     visibleLimit = 12;
-    $("sortFilter").value = "latest";
+    setSelectValue("sortFilter", "latest");
     renderTypeChips();
     render();
   }
 
-  function populateSelect(id, values, label) {
+  function populateSelect(id, values, label, selected = "all", labelFor = value => value) {
     const select = $(id);
     select.innerHTML = `<option value="all">${label}</option>`;
     [...new Set(values.filter(Boolean))].sort().forEach(value => {
       const option = document.createElement("option");
       option.value = value;
-      option.textContent = value;
+      option.textContent = labelFor(value);
       select.appendChild(option);
     });
+    const nextValue = values.includes(selected) ? selected : "all";
+    select.value = nextValue;
+    return nextValue;
   }
 
   function initialize(nextCars, source) {
-    cars = (nextCars || []).map((car, index) => ({
+    cars = (Array.isArray(nextCars) ? nextCars : []).map((car, index) => ({
       ...car,
       _sourceIndex: car._sourceIndex ?? index,
       _galleryKey: car.id ? `id:${car.id}` : `source:${car._fallbackIndex ?? index}`
     }));
-    populateSelect("brandFilter", cars.map(car => car.brand), "Semua brand");
-    populateSelect("locationFilter", cars.map(car => car.location), "Semua lokasi");
+    brand = populateSelect("brandFilter", cars.map(car => car.brand), "Semua brand", brand);
+    locationName = populateSelect("locationFilter", cars.map(car => car.location), "Semua lokasi", locationName);
+    status = populateSelect("statusFilter", cars.map(car => normalizedStatus(car.status)), "Semua status", status, value => window.IASBCards.statusInfo(value).label);
+    if (activeType !== "all" && !cars.some(typeMatcher)) activeType = "all";
+    visibleLimit = 12;
     renderTypeChips();
     render();
     document.body.dataset.inventorySource = source;
   }
 
-  bindStaticControls();
-  window.addEventListener("iasb:data", event => {
-    initialize(event.detail.inventory || [], event.detail.inventorySource || "managed");
-  });
-  window.addEventListener("iasb:error", () => showState(
-    "error",
-    "Inventory tidak dapat dimuatkan buat sementara waktu",
-    "WhatsApp team Izuwan untuk semakan ready stock dan availability terkini.",
-    "WhatsApp Main Line"
-  ));
-  if (!window.IASBData?.configured) {
-    window.setTimeout(() => initialize(fallbackCars, "built-in"), 180);
+  function acceptManagedData(data) {
+    if (!data || data.inventorySource === "none" || !Array.isArray(data.inventory)) { showLoadError(); return; }
+    if (data === lastManagedData) return;
+    lastManagedData = data;
+    initialize(data.inventory || [], data.inventorySource || "managed");
   }
+
+  function showLoadError() {
+    showState(
+      "error",
+      "Inventory tidak dapat dimuatkan buat sementara waktu",
+      "WhatsApp team Izuwan untuk semakan ready stock dan availability terkini.",
+      "WhatsApp Main Line"
+    );
+  }
+
+  function loadInventory(force = false) {
+    $("inventorySummary").textContent = "Memuatkan inventory terkini…";
+    $("carGrid").innerHTML = '<div class="inventory-skeleton"></div><div class="inventory-skeleton"></div><div class="inventory-skeleton"></div>';
+    if (window.IASBSite?.loadManagedData) {
+      // The promise also covers data that arrived before this page subscribed.
+      window.IASBSite.loadManagedData({ force }).then(acceptManagedData).catch(showLoadError);
+    } else if (!window.IASBData?.configured && !window.IASBData?.sheetConfigured) {
+      initialize(fallbackCars, "built-in");
+    }
+  }
+
+  if (typeof URLSearchParams !== "undefined") {
+    searchTerm = new URLSearchParams(window.location?.search || "").get("search") || "";
+    $("stockSearch").value = searchTerm;
+  }
+  bindStaticControls();
+  window.addEventListener("iasb:data", event => acceptManagedData(event.detail));
+  window.addEventListener("iasb:error", showLoadError);
+  loadInventory();
 })();
