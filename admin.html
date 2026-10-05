@@ -6,20 +6,18 @@
   <meta name="theme-color" content="#0a0c0e">
   <meta name="robots" content="noindex, nofollow">
   <title>IASB Admin Panel</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260713-1">
-  <link rel="stylesheet" href="admin-overrides.css?v=20260715-1">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="admin.css?v=20261005">
+  <link rel="stylesheet" href="admin-overrides.css?v=20261005">  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="manifest" href="site.webmanifest">
+  <link rel="stylesheet" href="admin-workspace.css?v=20261005">
 </head>
 <body>
   <section class="admin-login" id="loginView">
     <form class="login-card" id="loginForm">
-      <div class="admin-brand"><span>IA</span><div><b>IZUWAN</b><small>ADMIN PANEL</small></div></div>
-      <h1>Control room.</h1>
+      <div class="admin-brand"><img src="assets/company-logo.png" alt="Izuwan Automobile"><small>MANAGEMENT WORKSPACE</small></div>
+      <h1>Selamat kembali.</h1>
       <p>Login untuk urus stok, harga dan tetapan salesman.</p>
       <label>Email<input id="loginEmail" type="email" required autocomplete="email"></label>
       <label>Password<input id="loginPassword" type="password" required autocomplete="current-password"></label>
@@ -31,16 +29,16 @@
 
   <div class="admin-app hidden" id="adminView">
     <aside class="admin-sidebar" id="adminSidebar">
-      <div class="admin-brand"><span>IA</span><div><b>IZUWAN</b><small>ADMIN PANEL</small></div></div>
+      <div class="admin-brand"><img src="assets/company-logo.png" alt="Izuwan Automobile"><small>MANAGEMENT WORKSPACE</small></div>
       <nav aria-label="Admin navigation">
         <span class="admin-nav-group">OPERATIONS</span>
         <button type="button" class="admin-nav active" data-page="dashboard">Overview</button>
-        <button type="button" class="admin-nav" data-page="inventory">Inventory</button>
-        <button type="button" class="admin-nav" data-page="leads">Website interactions</button>
+        <button type="button" class="admin-nav" data-page="inventory">Stock inventory</button>
+        <button type="button" class="admin-nav" data-page="leads">Click analytics</button>
         <span class="admin-nav-group">MARKETING</span>
         <button type="button" class="admin-nav" data-page="events">Events</button>
         <button type="button" class="admin-nav" data-page="delivered">Customer deliveries</button>
-        <span class="admin-nav-group">BUSINESS</span>
+        <button type="button" class="admin-nav" data-page="pricelist">Pricelist import</button><span class="admin-nav-group">BUSINESS</span>
         <button type="button" class="admin-nav" data-page="salesmen">Sales team</button>
         <button type="button" class="admin-nav" data-page="settings">Site & OTR settings</button>
       </nav>
@@ -48,19 +46,19 @@
       <button class="logout-btn" id="logoutButton">Logout</button>
     </aside>
 
-    <main class="admin-main">
+    <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" aria-label="Tutup menu" hidden></button><main class="admin-main" id="adminMain">
       <header class="admin-topbar">
         <div><span>IASB MANAGEMENT</span><h1 id="pageTitle">Overview</h1></div>
-        <button class="mobile-menu" id="mobileMenu" type="button" aria-controls="adminSidebar" aria-expanded="false">Menu</button>
-      </header>
+        <div class="topbar-actions"><span class="workspace-label">Admin workspace</span><button type="button" id="refreshAdminButton">Refresh data</button><button class="mobile-menu" id="mobileMenu" type="button" aria-controls="adminSidebar" aria-expanded="false">Menu</button></div>
+      </header><div id="dataStatus" class="data-status" role="status" aria-live="polite">Memuatkan data…</div><p class="source-note">Managed inventory · Data Supabase di sini mungkin berbeza daripada feed Google Sheet di website public.</p>
 
       <section class="admin-page active" data-page-panel="dashboard">
-        <div class="stats-grid">
+        <div class="workspace-intro"><div><span>OPERATIONS AT A GLANCE</span><h2>Setiap stok. Satu ruang kerja.</h2><p>Semak inventory, kemas kini team dan urus paparan website.</p></div><button type="button" class="accent-btn" data-go-page="inventory">Urus stok ↗</button></div><div class="stats-grid">
           <article><span>Total unit</span><strong id="statUnits">0</strong></article>
-          <article><span>Model aktif</span><strong id="statModels">0</strong></article>
+          <article><span>Rekod stok aktif</span><strong id="statModels">0</strong></article>
           <article><span>Incoming</span><strong id="statIncoming">0</strong></article>
           <article><span>Delivered</span><strong id="statDelivered">0</strong></article>
-          <article><span>Website interactions</span><strong id="statLeads">0</strong></article>
+          <article><span>Clicks · latest 200</span><strong id="statLeads">0</strong></article>
           <article><span>Salesmen</span><strong id="statSalesmen">0</strong></article>
         </div>
         <div class="dashboard-grid">
@@ -96,40 +94,19 @@
           <div class="inventory-admin-hero">
             <div>
               <span>WORKFLOW</span>
-              <h3>Urus stock, gambar, campaign dan visibility dari satu tempat.</h3>
-              <p>Guna quick actions di bawah untuk pilih stok, bulk update status, upload banyak gambar dan keep homepage featured section sentiasa fresh.</p>
+              <h3>Stok yang teratur. Kerja lebih mudah.</h3>
+              <p>Cari rekod, semak chassis dan kemas kini status. Pilih stok untuk tindakan pukal.</p>
             </div>
             <div class="inventory-quick-stats" id="inventoryQuickStats"></div>
           </div>
           <div class="admin-filters">
-            <input id="adminStockSearch" type="search" placeholder="Cari model, chassis no., brand, lokasi...">
-            <select id="adminStockStatus"><option value="all">Semua status</option><option>AVAILABLE</option><option>INCOMING</option><option>DONE PAID DUTI</option><option>PORT KLANG</option></select>
-            <select id="adminChassisFilter"><option value="all">Semua chassis</option><option value="duplicate">Duplicate chassis</option><option value="missing">Chassis belum diisi</option><option value="complete">Chassis lengkap</option></select>
+            <input aria-label="Cari stok" id="adminStockSearch" type="search" placeholder="Cari model, chassis no., brand, lokasi...">
+            <select aria-label="Status stok" id="adminStockStatus"><option value="all">Semua status</option><option>AVAILABLE</option><option>INCOMING</option><option>DONE PAID DUTI</option><option>PORT KLANG</option><option>BOOKED</option><option>RESERVED</option><option>SOLD</option><option>HIDDEN</option></select>
+            <select aria-label="Kelengkapan chassis" id="adminChassisFilter"><option value="all">Semua chassis</option><option value="duplicate">Duplicate chassis</option><option value="missing">Chassis belum diisi</option><option value="complete">Chassis lengkap</option></select>
           </div>
-          <div class="chassis-control-panel">
+          <p class="result-count" id="inventoryResultCount"></p><div class="chassis-control-panel">
             <div><span>CHASSIS CONTROL</span><strong id="chassisHealthSummary">Checking chassis records...</strong><small>Duplicate dikesan berdasarkan nombor chassis sebenar, bukan model atau harga.</small></div>
             <div><button type="button" id="showDuplicateChassis">Review duplicates</button><button type="button" id="showMissingChassis">Missing chassis</button><button type="button" id="resetChassisFilter">Show all</button></div>
-          </div>
-          <div class="pricelist-importer" id="pricelistImporter" hidden>
-            <div>
-              <span>PRICELIST IMPORT</span>
-              <h3>Upload pricelist CSV</h3>
-              <p>Upload CSV untuk hasil paling tepat, atau PDF untuk bacaan best-effort. Sistem akan match stok ikut brand, model, year, grade dan variant.</p>
-              <button type="button" class="quiet-btn" id="closePricelistImporter">Tutup importer</button>
-            </div>
-            <div class="pricelist-controls">
-              <input id="pricelistFile" type="file" accept=".csv,.txt,.tsv,.pdf,text/csv,text/plain,application/pdf">
-              <input id="pricelistDate" placeholder="Pricelist date contoh: 24.6.26">
-              <select id="pricelistMode">
-                <option value="upsert">Update existing + insert new</option>
-                <option value="insert">Insert as new only</option>
-                <option value="update">Update existing only</option>
-              </select>
-              <label class="pricelist-toggle"><input id="excludeIncomingPricelist" type="checkbox" checked><span>Exclude status INCOMING</span></label>
-              <button type="button" id="previewPricelistButton">Preview</button>
-              <button type="button" class="accent-btn" id="importPricelistButton" disabled>Import / Update</button>
-            </div>
-            <div class="pricelist-preview" id="pricelistPreview">Belum ada file dipilih.</div>
           </div>
           <div class="bulk-toolbar" id="inventoryBulkToolbar">
             <div><strong id="selectedInventoryCount">0 selected</strong><span id="duplicateInventoryHint">Checking duplicates...</span></div>
@@ -155,14 +132,36 @@
         </div>
       </section>
 
+      <section class="admin-page" data-page-panel="pricelist"><div class="admin-card"><div class="card-title"><div><span>STOCK UPDATES</span><h2>Pricelist import</h2></div></div><p class="admin-help">Import ini mengemas kini managed inventory di Supabase. Ia tidak menukar sumber Google Sheet public.</p>          <div class="pricelist-importer" id="pricelistImporter">
+            <div>
+              <span>PRICELIST IMPORT</span>
+              <h3>Upload pricelist CSV</h3>
+              <p>Upload CSV untuk hasil paling tepat, atau PDF untuk bacaan best-effort. Sistem akan match stok ikut brand, model, year, grade dan variant.</p>
+              <button type="button" class="quiet-btn" id="closePricelistImporter">Kembali ke stok</button>
+            </div>
+            <div class="pricelist-controls">
+              <input aria-label="Fail pricelist" id="pricelistFile" type="file" accept=".csv,.txt,.tsv,.pdf,text/csv,text/plain,application/pdf">
+              <input aria-label="Tarikh pricelist import" id="pricelistDate" placeholder="Pricelist date contoh: 24.6.26">
+              <select aria-label="Mod import" id="pricelistMode">
+                <option value="upsert">Update existing + insert new</option>
+                <option value="insert">Insert as new only</option>
+                <option value="update">Update existing only</option>
+              </select>
+              <label class="pricelist-toggle"><input id="excludeIncomingPricelist" type="checkbox" checked><span>Exclude status INCOMING</span></label>
+              <button type="button" id="previewPricelistButton">Preview</button>
+              <button type="button" class="accent-btn" id="importPricelistButton" disabled>Import / Update</button>
+            </div>
+            <div class="pricelist-preview" id="pricelistPreview">Belum ada file dipilih.</div>
+          </div>
+</div></section>
       <section class="admin-page" data-page-panel="leads">
         <div class="admin-card">
           <div class="card-title">
-            <div><span>INTERACTION TRACKING</span><h2>Website interactions</h2></div>
+            <div><span>INTERACTION TRACKING</span><h2>Click analytics</h2></div>
             <button id="refreshLeadsButton">Refresh</button>
           </div>
-          <p class="admin-help">Rekod klik WhatsApp, car detail, calculator, event dan Find My Car. Ini menunjukkan minat pengguna, bukan semestinya lead yang sudah menghubungi team.</p>
-          <div class="lead-summary" id="leadSummary"></div>
+          <p class="admin-help">Rekod klik WhatsApp, car detail, calculator, event dan Find My Car. Maksimum 200 klik terkini, bukan confirmed leads atau jumlah pelawat unik. Klik tidak mengesahkan mesej telah dihantar.</p>
+          <div class="admin-filters"><input id="leadSearch" type="search" aria-label="Cari klik" placeholder="Cari page, action atau model…"><select id="leadAction" aria-label="Jenis klik"><option value="all">Semua actions</option></select></div><p class="result-count" id="leadResultCount"></p><div class="lead-summary" id="leadSummary"></div>
           <div class="table-wrap">
             <table>
               <thead><tr><th>Time</th><th>Page</th><th>Action</th><th>Label / Car</th><th></th></tr></thead>
@@ -205,7 +204,7 @@
       </section>
 
       <section class="admin-page" data-page-panel="settings">
-        <form class="admin-card settings-form" id="settingsForm">
+        <form class="admin-card settings-form" id="settingsForm"><p class="admin-help" id="settingsReadStatus" role="status"></p>
           <div class="card-title"><div><span>GLOBAL SETTINGS</span><h2>Site & OTR</h2></div><button class="accent-btn" type="submit">Simpan tetapan</button></div>
           <div class="form-grid">
             <label>Nama syarikat<input id="settingCompany" required></label>
@@ -381,7 +380,7 @@
   <script src="config.js?v=20260714-5"></script>
   <script src="data-service.js?v=20260804-1"></script>
   <script src="inventory.js?v=20260630-2"></script>
-  <script src="admin.js?v=20260715-1"></script>
+  <script src="admin.js?v=20261005"></script>
 </body>
 </html>
 

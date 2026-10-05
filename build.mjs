@@ -14,6 +14,7 @@ const files = [
   "about.html",
   "admin-overrides.css",
   "admin.css",
+  "admin-workspace.css",
   "admin.html",
   "admin.js",
   "android-chrome-192x192.png",

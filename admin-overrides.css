@@ -28,7 +28,7 @@
 
 .inventory-admin-hero h3 {
   margin: 7px 0 8px;
-  font: 800 28px "Manrope";
+  font: 800 28px system-ui, sans-serif;
   letter-spacing: -.05em;
 }
 
@@ -68,7 +68,7 @@
 
 .inventory-quick-stats strong {
   margin-top: 8px;
-  font: 800 26px "Manrope";
+  font: 800 26px system-ui, sans-serif;
 }
 
 .inventory-quick-stats small {
@@ -118,7 +118,7 @@ textarea {
 
 .event-summary h3 {
   margin: 14px 0 6px;
-  font: 800 24px "Manrope";
+  font: 800 24px system-ui, sans-serif;
   letter-spacing: -.04em;
 }
 
@@ -161,7 +161,7 @@ textarea {
 .chassis-control-panel strong,
 .chassis-control-panel small { display: block; }
 .chassis-control-panel span { color: var(--accent); font-size: 9px; font-weight: 900; letter-spacing: .15em; }
-.chassis-control-panel strong { margin-top: 5px; font: 800 15px "Manrope"; }
+.chassis-control-panel strong { margin-top: 5px; font: 800 15px system-ui, sans-serif; }
 .chassis-control-panel small { margin-top: 3px; color: var(--muted); font-size: 11px; }
 .chassis-control-panel > div:last-child { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
 .chassis-control-panel button,
@@ -203,7 +203,7 @@ textarea {
 }
 
 .bulk-toolbar strong {
-  font: 800 13px "Manrope";
+  font: 800 13px system-ui, sans-serif;
 }
 
 .bulk-toolbar span {
@@ -261,7 +261,7 @@ textarea {
 
 .media-inline-copy h3 {
   margin: 8px 0 6px;
-  font: 800 20px "Manrope";
+  font: 800 20px system-ui, sans-serif;
   letter-spacing: -.04em;
 }
 
@@ -448,7 +448,7 @@ textarea {
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
-  font: 500 25px/1 "Manrope";
+  font: 500 25px/1 system-ui, sans-serif;
 }
 
 .photo-manager-dropzone strong,
@@ -514,7 +514,7 @@ textarea {
 .photo-manager-summary strong {
   overflow: hidden;
   margin-top: 7px;
-  font: 800 20px "Manrope";
+  font: 800 20px system-ui, sans-serif;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -679,7 +679,7 @@ textarea {
 
 .pricelist-importer h3 {
   margin: 7px 0 6px;
-  font: 800 22px "Manrope";
+  font: 800 22px system-ui, sans-serif;
   letter-spacing: -.04em;
 }
 
@@ -772,7 +772,7 @@ textarea {
 .import-stats strong {
   margin-top: 4px;
   color: var(--text);
-  font: 800 22px "Manrope";
+  font: 800 22px system-ui, sans-serif;
 }
 
 .select-col {
@@ -810,7 +810,7 @@ textarea {
 .lead-summary strong {
   display: block;
   margin-top: 9px;
-  font: 800 28px "Manrope";
+  font: 800 28px system-ui, sans-serif;
 }
 
 @media (max-width: 850px) {
@@ -932,7 +932,7 @@ textarea {
 .health-item strong,
 .health-item span,
 .health-item small { display: block; }
-.health-item strong { font: 800 30px "Manrope"; }
+.health-item strong { font: 800 30px system-ui, sans-serif; }
 .health-item span { margin-top: 12px; font-size: 14px; font-weight: 800; }
 .health-item small { margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .health-item.warning { border-color: rgba(255,190,73,.36); }
@@ -1006,7 +1006,7 @@ textarea {
 .confirm-dialog::backdrop { background: rgba(0,0,0,.78); backdrop-filter: blur(4px); }
 .confirm-card { padding: 28px; background: #151719; }
 .confirm-card > span { color: var(--danger); font-size: 11px; font-weight: 900; letter-spacing: .16em; }
-.confirm-card h2 { margin: 9px 0 8px; font: 800 25px "Manrope"; }
+.confirm-card h2 { margin: 9px 0 8px; font: 800 25px system-ui, sans-serif; }
 .confirm-card p { color: var(--muted); font-size: 14px; line-height: 1.65; }
 .danger-confirm { border: 0 !important; background: var(--danger) !important; color: #fff !important; font-weight: 900; }
 

@@ -125,7 +125,7 @@
     const auction = car.auction_report
       ? { cls: "verified", tag: "AVAILABLE", text: "Laporan lelongan tersedia untuk semakan bersama advisor." }
       : { cls: "confirm", tag: "PENGESAHAN", text: "Status laporan belum dinyatakan. Minta advisor semak untuk anda." };
-    const mileage = car.mileage_verified
+    const mileage = car.mileage_verified && mileageText(car.mileage)
       ? { cls: "verified", tag: "VERIFIED", text: `${mileageText(car.mileage)} ditandakan telah disahkan.` }
       : { cls: "confirm", tag: "PENGESAHAN", text: mileageText(car.mileage) ? "Mileage dipaparkan; minta pengesahan advisor." : "Mileage akan disahkan bersama advisor." };
     const grade = car.grade_verified
@@ -229,14 +229,14 @@
         </small>
         <h1>${safeText(title)}</h1>
         ${car.variant ? `<p class="car-variant-line">${safeText(car.variant)}</p>` : ""}
-        ${storyBlock(car)}
+        <p class="car-key-facts">${[car.year, mileageText(car.mileage), car.grade ? `Grade ${car.grade}` : ""].filter(Boolean).map(safeText).join(" · ")}</p>
         <div class="car-detail-price">
           <span>${validPrice ? "Anggaran selling price" : "Harga unit"}</span>
           <strong>${validPrice ? money(car.price) : "Harga di pengesahan"}</strong>
           ${validPrice
             ? `<em>± ${money(monthly)}/bulan <b class="tenure">(${assumptions.depositPct}% deposit · ${assumptions.years} tahun · ${assumptions.rate}% p.a. anggaran)</b></em>
                <small class="car-price-note">Anggaran kadar rata. Tertakluk kepada kelulusan bank, CCRIS/CTOS dan dokumen. Insurance dan OTR disahkan bersama advisor.</small>`
-            : `<em>Unit incoming atau di pelabuhan. WhatsApp advisor untuk anggaran landing price terkini.</em>`}
+            : `<em>Harga belum disahkan. Hubungi advisor untuk harga terkini.</em>`}
           ${validPrice ? `<a class="car-price-calc" href="calculator.html?price=${Number(car.price) || 0}&car=${encodeURIComponent(title)}" data-lead-action="car_calculator" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(title)}">Kira ansuran tepat</a>` : ""}
         </div>
         <div class="car-detail-actions">
@@ -245,6 +245,7 @@
           <a class="ghost" href="inventory.html">Kembali ke inventory</a>
         </div>
         <div class="car-spec-grid">${specs}</div>
+        <details class="car-description"><summary>Butiran tambahan unit</summary>${storyBlock(car)}</details>
       </article>
     </section>
     <section class="car-detail-tools">
@@ -257,7 +258,7 @@
           <label>Tenure<select id="estimateYears"><option value="5">5 years</option><option value="7">7 years</option><option value="9" selected>9 years</option></select></label>
           <label class="estimator-output-label">Monthly estimate<output id="estimateOutput">${money(monthly)}</output></label>
         </div>
-        <small class="estimator-disclaimer">Anggaran kadar rata (10%/9 thn/3.2% default). Penyelesaian awal mengikut baki berkurangan (HPAA 2026). Tertakluk kepada kelulusan bank.</small>
+        <small class="estimator-disclaimer">Anggaran kadar rata (10%/9 thn/3.2% default). Tertakluk kepada kelulusan bank.</small>
       </form>` : `<div class="payment-estimator" id="paymentEstimator"><span class="eyebrow">PAYMENT ESTIMATOR</span><h2>Harga perlu disahkan dahulu.</h2><p>Hubungi advisor Izuwan untuk selling price terkini sebelum membuat anggaran pembiayaan.</p></div>`}
       <form class="viewing-card" id="viewingForm">
         <span class="eyebrow">VIEWING SLOT</span>

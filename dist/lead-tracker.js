@@ -1,4 +1,6 @@
 (function () {
+  // The local review server opts out of real lead analytics.
+  if (window.IASB_PREVIEW) { window.IASBLeadTracker = { track: async () => {} }; return; }
   const db = window.IASBData?.client;
   const sessionKey = "iasb_lead_session";
   const sessionId = localStorage.getItem(sessionKey) || crypto.randomUUID?.() || String(Date.now());

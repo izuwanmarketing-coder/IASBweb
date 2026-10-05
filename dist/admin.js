@@ -8,6 +8,10 @@ let deliveryRows = [];
 let leadRows = [];
 let settingsRow = {};
 let schemaWarnings = [];
+let readFailures = new Set();
+let settingsLoaded = false;
+let loadInFlight = null;
+let loginPending = false;
 const selectedInventoryIds = new Set();
 let parsedPricelistRows = [];
 let photoManagerCarId = null;
@@ -168,12 +172,19 @@ function eventStatus(event) {
 }
 
 async function readQuery(label, query, fallback) {
-  const { data, error } = await query;
-  if (error) {
-    schemaWarnings.push(`${label}: ${error.message}`);
+  let timeout;
+  try {
+    const { data, error } = await Promise.race([
+      query,
+      new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error("Read timed out")), 15000); })
+    ]);
+    if (error) throw error;
+    return data ?? fallback;
+  } catch (error) {
+    readFailures.add(label);
+    schemaWarnings.push(label);
     return fallback;
-  }
-  return data ?? fallback;
+  } finally { clearTimeout(timeout); }
 }
 
 async function verifyAdmin() {
@@ -187,11 +198,30 @@ async function verifyAdmin() {
 async function showApp() {
   $("loginView").classList.add("hidden");
   $("adminView").classList.remove("hidden");
+  openAdminPage(location.hash.slice(1) || "dashboard", false);
   await loadAll();
 }
 
-async function loadAll() {
+function loadAll() {
+  if (loadInFlight) return loadInFlight;
+  loadInFlight = performLoad().finally(() => {
+    loadInFlight = null;
+    $("refreshAdminButton").disabled = false;
+    $("refreshLeadsButton").disabled = false;
+    $("adminMain").setAttribute("aria-busy", "false");
+  });
+  return loadInFlight;
+}
+
+async function performLoad() {
   schemaWarnings = [];
+  readFailures = new Set();
+  settingsLoaded = false;
+  document.querySelector("#settingsForm [type=submit]").disabled = true;
+  $("refreshAdminButton").disabled = true;
+  $("refreshLeadsButton").disabled = true;
+  $("dataStatus").textContent = "Memuatkan data…";
+  $("adminMain").setAttribute("aria-busy", "true");
   const [inventoryData, settingsData, salesmenData, eventsData, deliveriesData, leadsData] = await Promise.all([
     readQuery("Inventory", db.from("inventory").select("*").order("updated_at", { ascending: false }), []),
     readQuery("Settings", db.from("site_settings").select("*").eq("id", 1).maybeSingle(), {}),
@@ -206,6 +236,9 @@ async function loadAll() {
   eventRows = eventsData;
   deliveryRows = deliveriesData;
   leadRows = leadsData;
+  settingsLoaded = !readFailures.has("Settings");
+  const existingIds = new Set(inventoryRows.map(car => String(car.id)));
+  for (const id of selectedInventoryIds) if (!existingIds.has(id)) selectedInventoryIds.delete(id);
   renderDashboard();
   renderInventory();
   renderSettings();
@@ -213,7 +246,10 @@ async function loadAll() {
   renderEvents();
   renderDeliveries();
   renderLeads();
-  if (schemaWarnings.length) toast("Ada schema baru belum aktif. Run supabase-schema.sql jika perlu.");
+  renderReadStatus();
+  $("refreshAdminButton").disabled = false;
+  $("refreshLeadsButton").disabled = false;
+  $("adminMain").setAttribute("aria-busy", "false");
 }
 
 function renderDashboard() {
@@ -258,7 +294,7 @@ function renderDashboard() {
     [incomplete, "Maklumat belum lengkap", "Harga, lokasi, brand atau model masih kosong.", "inventory", incomplete ? "warning" : "good"],
     [stale, "Tidak dikemas kini 30+ hari", "Semak availability dan status unit lama.", "inventory", stale ? "warning" : "good"],
     [duplicates, "Duplicate chassis", "Review nombor chassis berulang sebelum cleanup.", "inventory", duplicates ? "danger" : "good"],
-    [interactionsToday, "Interactions hari ini", "Klik berniat tinggi daripada website.", "leads", "info"],
+    [interactionsToday, "Interactions hari ini", "Klik direkodkan, bukan confirmed leads.", "leads", "info"],
     [liveEvent ? 1 : 0, "Campaign live", liveEvent ? liveEvent.title : "Tiada campaign aktif.", "events", liveEvent ? "good" : "info"]
   ];
   $("adminHealth").innerHTML = healthItems.map(([count, label, hint, page, tone]) => `
@@ -273,7 +309,7 @@ function filteredInventory() {
   const chassisFilter = $("adminChassisFilter")?.value || "all";
   const duplicateKeys = duplicateChassisKeys();
   return inventoryRows.filter(car =>
-    (status === "all" || car.status === status) &&
+    (status === "all" || (status === "HIDDEN" ? !car.is_active : car.is_active && car.status === status)) &&
     (chassisFilter === "all" ||
       (chassisFilter === "duplicate" && duplicateKeys.has(chassisFor(car))) ||
       (chassisFilter === "missing" && !chassisFor(car)) ||
@@ -630,7 +666,7 @@ function renderInventoryQuickStats(visibleRows = filteredInventory()) {
   const withChassis = visibleRows.filter(car => chassisFor(car)).length;
   const totalUnits = active.reduce((sum, car) => sum + Number(car.units || 1), 0);
   $("inventoryQuickStats").innerHTML = [
-    ["Visible stock", `${active.length}`, `${totalUnits} unit live`],
+    ["Visible stock", `${active.length}`, `${totalUnits} unit aktif`],
     ["Featured", `${featured}`, "Homepage picks"],
     ["With photos", `${withPhotos}`, "Gallery attached"],
     ["Chassis ready", `${withChassis}`, `${Math.max(0, visibleRows.length - withChassis)} missing`],
@@ -706,18 +742,22 @@ function renderInventory() {
         <b>${safeText(car.brand)} ${safeText(car.model)} ${car.is_featured ? '<span class="mini-badge">FEATURED</span>' : ""}${car.campaign_tag ? `<span class="mini-badge">${safeText(car.campaign_tag)}</span>` : ""}${car.is_hot ? '<span class="mini-badge">HOT</span>' : ""}</b>
         <small>${safeText([car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "-")}</small>
       </td>
+      <td class="chassis-value">${safeText(chassisFor(car) || "Belum diisi")}</td>
       <td>${safeText(car.location)}</td>
       <td><span class="status-chip ${adminStatusClass(car.is_active ? car.status : "HIDDEN")}"><i aria-hidden="true"></i>${safeText(adminStatusLabel(car.is_active ? car.status : "HIDDEN"))}</span></td>
       <td>${money(car.price)}</td>
       <td>${km(car.mileage)}</td>
       <td>${Number(car.units || 1)}</td>
       <td><div class="row-actions"><button data-edit-car="${car.id}">Edit</button><button class="danger" data-delete-car="${car.id}">Delete</button></div></td>
-    </tr>`).join("") || `<tr><td colspan="8">Tiada stok dijumpai.</td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="9">${readFailures.has("Inventory") ? "Inventory tidak dapat dimuatkan. Cuba Refresh data." : inventoryRows.length ? "Tiada stok sepadan. Cuba ubah carian atau filter." : "Belum ada stok. Gunakan Tambah stok untuk mula."}</td></tr>`;
   syncInventoryBulkToolbar(visibleRows);
   labelAdminTables();
 }
 
 function renderSettings() {
+  document.querySelector("#settingsForm [type=submit]").disabled = !settingsLoaded;
+  $("settingsReadStatus").textContent = settingsLoaded ? "Tetapan dimuatkan. Semak perubahan sebelum simpan." : "Tetapan tidak dapat dimuatkan. Simpan dikunci; cuba Refresh data dahulu.";
+  if (!settingsLoaded) return;
   $("settingCompany").value = settingsRow.company_name || "";
   $("settingDate").value = settingsRow.pricelist_date || "";
   $("settingProcessing").value = settingsRow.processing_fee || 0;
@@ -765,22 +805,35 @@ function renderDeliveries() {
 }
 
 function renderLeads() {
-  const byAction = leadRows.reduce((acc, lead) => {
+  if (readFailures.has("Leads")) {
+    $("leadSummary").textContent = "Click analytics tidak tersedia.";
+    $("leadResultCount").textContent = "Data klik tidak tersedia.";
+    $("leadsTable").innerHTML = '<tr><td colspan="5">Klik tidak dapat dimuatkan. Cuba Refresh data.</td></tr>';
+    return;
+  }
+  const action = $("leadAction").value;
+  const search = $("leadSearch").value.trim().toLowerCase();
+  const actions = [...new Set(leadRows.map(lead => lead.action).filter(Boolean))];
+  $("leadAction").innerHTML = '<option value="all">Semua actions</option>' + actions.map(value => `<option value="${safeText(value)}">${safeText(value)}</option>`).join("");
+  $("leadAction").value = actions.includes(action) ? action : "all";
+  const visibleLeads = leadRows.filter(lead => ($("leadAction").value === "all" || lead.action === $("leadAction").value) && [lead.page, lead.action, lead.label, lead.car_name].join(" ").toLowerCase().includes(search));
+  $("leadResultCount").textContent = `${visibleLeads.length} daripada ${leadRows.length} klik dimuatkan · maksimum 200 terkini`;
+  const byAction = visibleLeads.reduce((acc, lead) => {
     acc[lead.action || "unknown"] = (acc[lead.action || "unknown"] || 0) + 1;
     return acc;
   }, {});
   $("leadSummary").innerHTML = Object.entries(byAction).slice(0, 6).map(([action, count]) => `
     <article><span>${safeText(action)}</span><strong>${count}</strong></article>
-  `).join("") || `<p class="admin-help">Belum ada lead click. Deploy lead tracker dahulu atau tunggu traffic masuk.</p>`;
+  `).join("") || `<p class="admin-help">Tiada klik untuk paparan ini.</p>`;
 
-  $("leadsTable").innerHTML = leadRows.map(lead => `
+  $("leadsTable").innerHTML = visibleLeads.map(lead => `
     <tr>
       <td>${formatLeadTime(lead.created_at)}</td>
       <td>${safeText(lead.page)}</td>
       <td><span class="status-chip">${safeText(lead.action)}</span></td>
       <td class="table-main"><b>${safeText(lead.label || lead.car_name || "-")}</b><small>${safeText(lead.car_name || lead.source_url || "-")}</small></td>
       <td>${lead.source_url ? `<a href="${safeText(lead.source_url)}" target="_blank" rel="noopener">Open</a>` : ""}</td>
-    </tr>`).join("") || `<tr><td colspan="5">Belum ada lead.</td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="5">Tiada klik sepadan.</td></tr>`;
   labelAdminTables();
 }
 
@@ -980,6 +1033,11 @@ async function openPhotoManager(carId) {
 
 renderInventory = function renderInventoryEnhanced() {
   const visibleRows = filteredInventory();
+  $("inventoryResultCount").textContent = readFailures.has("Inventory") ? "Inventory tidak tersedia" : `${visibleRows.length} daripada ${inventoryRows.length} rekod stok`;
+  if (readFailures.has("Inventory")) {
+    $("inventoryTable").innerHTML = '<tr><td colspan="9">Inventory tidak dapat dimuatkan. Cuba Refresh data.</td></tr>';
+    return;
+  }
   const duplicateKeys = duplicateChassisKeys();
   renderInventoryQuickStats(visibleRows);
   renderChassisHealth();
@@ -1002,7 +1060,7 @@ renderInventory = function renderInventoryEnhanced() {
       <td>${km(car.mileage)}</td>
       <td>${Number(car.units || 1)}</td>
       <td><div class="row-actions"><button data-edit-car="${car.id}">Edit</button><button data-photos-car="${car.id}">Photos</button><button class="danger" data-delete-car="${car.id}">Delete</button></div></td>
-    </tr>`).join("") || `<tr><td colspan="9">Tiada stok dijumpai.</td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="9">${inventoryRows.length ? "Tiada stok sepadan. Cuba ubah carian atau filter." : "Belum ada stok. Gunakan Tambah stok untuk mula."}</td></tr>`;
   syncInventoryBulkToolbar(visibleRows);
   labelAdminTables();
 };
@@ -1044,18 +1102,23 @@ openCarDialog = function openCarDialogEnhanced(car = {}) {
 
 $("loginForm").addEventListener("submit", async event => {
   event.preventDefault();
+  if (loginPending) return;
   $("loginMessage").textContent = "";
   if (!db) return $("loginMessage").textContent = "Supabase belum disambungkan.";
-  const { error } = await db.auth.signInWithPassword({
-    email: $("loginEmail").value,
-    password: $("loginPassword").value
-  });
-  if (error) return $("loginMessage").textContent = error.message;
-  if (!await verifyAdmin()) {
-    await db.auth.signOut();
-    return $("loginMessage").textContent = "Akaun ini bukan admin.";
-  }
-  await showApp();
+  loginPending = true;
+  const button = document.querySelector("#loginForm [type=submit]");
+  button.disabled = true;
+  button.textContent = "Menyemak akses…";
+  try {
+    const { error } = await db.auth.signInWithPassword({ email: $("loginEmail").value, password: $("loginPassword").value });
+    if (error) throw error;
+    if (!await verifyAdmin()) {
+      await db.auth.signOut();
+      throw new Error("Akaun ini bukan admin.");
+    }
+    await showApp();
+  } catch (error) { $("loginMessage").textContent = error.message || "Login gagal. Cuba lagi."; }
+  finally { loginPending = false; button.disabled = false; button.textContent = "Login admin"; }
 });
 
 $("logoutButton").addEventListener("click", async () => {
@@ -1063,35 +1126,67 @@ $("logoutButton").addEventListener("click", async () => {
   location.reload();
 });
 
-function openAdminPage(page) {
-  const activeButton = document.querySelector(`.admin-nav[data-page="${page}"]`);
-  document.querySelectorAll(".admin-nav").forEach(button => button.classList.toggle("active", button === activeButton));
-  document.querySelectorAll(".admin-page").forEach(panel => panel.classList.toggle("active", panel.dataset.pagePanel === page));
-  $("pageTitle").textContent = activeButton?.textContent.trim() || "Overview";
-  document.querySelector(".admin-sidebar").classList.remove("open");
-  $("mobileMenu").setAttribute("aria-expanded", "false");
-  window.scrollTo({ top: 0, behavior: "smooth" });
+function setMenu(open) {
+  $("adminSidebar").classList.toggle("open", open);
+  $("mobileMenu").setAttribute("aria-expanded", String(open));
+  $("sidebarBackdrop").hidden = !open;
+  document.body.classList.toggle("menu-open", open);
+  $("adminMain").inert = open;
+  if (open) $("adminSidebar").querySelector(".admin-nav.active").focus();
 }
 
-document.querySelectorAll(".admin-nav").forEach(button => button.addEventListener("click", () => openAdminPage(button.dataset.page)));
-$("adminHealth").addEventListener("click", event => {
-  const target = event.target.closest("[data-go-page]");
-  if (target) openAdminPage(target.dataset.goPage);
-});
+function renderReadStatus() {
+  $("dataStatus").classList.toggle("has-errors", readFailures.size > 0);
+  $("dataStatus").textContent = readFailures.size
+    ? `Tidak dapat memuatkan: ${[...readFailures].join(", ")}. Cuba Refresh data.`
+    : `Data dimuatkan · ${new Date().toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit" })}`;
+  const metrics = { Inventory: ["statUnits", "statModels", "statIncoming"], Deliveries: ["statDelivered"], Leads: ["statLeads"], Salesmen: ["statSalesmen"] };
+  for (const [label, ids] of Object.entries(metrics)) if (readFailures.has(label)) ids.forEach(id => $(id).textContent = "—");
+  const tables = { Inventory: ["inventoryTable", 9], Salesmen: ["salesmenTable", 5], Events: ["eventsTable", 5], Deliveries: ["deliveriesTable", 5], Leads: ["leadsTable", 5] };
+  for (const [label, [id, columns]] of Object.entries(tables)) if (readFailures.has(label)) $(id).innerHTML = `<tr><td colspan="${columns}">${safeText(label)} tidak dapat dimuatkan. Cuba Refresh data.</td></tr>`;
+  if (readFailures.has("Inventory")) {
+    $("overviewBreakdown").textContent = "Inventory tidak tersedia.";
+    $("inventoryQuickStats").textContent = "Ringkasan stok tidak tersedia.";
+    $("chassisHealthSummary").textContent = "Semakan chassis tidak tersedia.";
+  }
+  if (readFailures.has("Events")) $("eventSummary").textContent = "Status campaign tidak tersedia.";
+  if (readFailures.has("Leads")) { $("leadSummary").textContent = "Click analytics tidak tersedia."; $("leadResultCount").textContent = "Data klik tidak tersedia."; }
+  if (readFailures.size) $("adminHealth").innerHTML = '<p class="admin-help">Semakan perhatian ditangguhkan sehingga semua data berjaya dimuatkan.</p>';
+}
 
-$("mobileMenu").addEventListener("click", () => {
-  const sidebar = document.querySelector(".admin-sidebar");
-  const open = sidebar.classList.toggle("open");
-  $("mobileMenu").setAttribute("aria-expanded", String(open));
+function openAdminPage(page, push = true) {
+  const pages = [...document.querySelectorAll(".admin-nav")];
+  const activeButton = pages.find(button => button.dataset.page === page) || pages[0];
+  page = activeButton.dataset.page;
+  pages.forEach(button => { button.classList.toggle("active", button === activeButton); button.setAttribute("aria-current", button === activeButton ? "page" : "false"); });
+  document.querySelectorAll(".admin-page").forEach(panel => panel.classList.toggle("active", panel.dataset.pagePanel === page));
+  $("pageTitle").textContent = activeButton.textContent.trim();
+  if (push && location.hash !== "#" + page) history.pushState(null, "", "#" + page);
+  setMenu(false);
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+window.addEventListener("popstate", () => openAdminPage(location.hash.slice(1), false));
+document.querySelectorAll(".admin-nav").forEach(button => button.addEventListener("click", () => openAdminPage(button.dataset.page)));
+document.addEventListener("click", event => { const target = event.target.closest("[data-go-page]"); if (target) openAdminPage(target.dataset.goPage); });
+$("mobileMenu").addEventListener("click", () => setMenu(!$("adminSidebar").classList.contains("open")));
+$("sidebarBackdrop").addEventListener("click", () => { setMenu(false); $("mobileMenu").focus(); });
+document.addEventListener("keydown", event => {
+  if (!$("adminSidebar").classList.contains("open")) return;
+  if (event.key === "Escape") { setMenu(false); $("mobileMenu").focus(); }
+  if (event.key === "Tab") {
+    const items = [...$("adminSidebar").querySelectorAll("button,a")].filter(el => !el.disabled);
+    const first = items[0], last = items[items.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  }
 });
-$("showPricelistImporter").addEventListener("click", () => {
-  $("pricelistImporter").hidden = false;
-  $("pricelistFile").focus();
-});
-$("closePricelistImporter").addEventListener("click", () => {
-  $("pricelistImporter").hidden = true;
-  $("showPricelistImporter").focus();
-});
+$("showPricelistImporter").addEventListener("click", () => { openAdminPage("pricelist"); $("pricelistFile").focus(); });
+$("closePricelistImporter").addEventListener("click", () => openAdminPage("inventory"));
+$("refreshAdminButton").addEventListener("click", loadAll);
+$("leadSearch").addEventListener("input", renderLeads);
+$("leadAction").addEventListener("change", renderLeads);
+
 document.querySelectorAll("[data-close-dialog]").forEach(button => button.addEventListener("click", () => {
   $(button.dataset.closeDialog).close();
 }));
@@ -1202,6 +1297,7 @@ $("pricelistFile").addEventListener("change", () => {
 });
 
 $("importPricelistButton").addEventListener("click", async () => {
+  if (loadInFlight || readFailures.has("Inventory") || ($("pricelistDate").value.trim() && !settingsLoaded)) return toast("Data inventory / tetapan belum tersedia. Refresh data dahulu.");
   if (!parsedPricelistRows.length) return toast("Preview pricelist dahulu");
   const mode = $("pricelistMode").value;
   const { insertRows, updateRows } = pricelistImportPlan();
@@ -1555,6 +1651,7 @@ $("deliveryForm").addEventListener("submit", async event => {
 
 $("settingsForm").addEventListener("submit", async event => {
   event.preventDefault();
+  if (!settingsLoaded || loadInFlight) return toast("Tetapan belum berjaya dimuatkan. Refresh data dahulu.");
   let logoUrl = settingsRow.logo_url || "";
   const file = $("settingLogo").files[0];
   if (file) {
@@ -1620,5 +1717,6 @@ $("salesmanForm").addEventListener("submit", async event => {
     $("setupWarning").classList.remove("hidden");
     return;
   }
-  if (await verifyAdmin()) await showApp();
+  try { if (await verifyAdmin()) await showApp(); }
+  catch { $("loginMessage").textContent = "Tidak dapat mengesahkan sesi. Cuba login semula."; }
 })();

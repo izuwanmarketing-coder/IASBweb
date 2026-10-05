@@ -147,6 +147,8 @@
       }
     });
     select.addEventListener('change', sync);
+    // Inventory resets values programmatically without replaying filter changes.
+    select.addEventListener('iasb:select-sync', sync);
     new MutationObserver(render).observe(select, { childList: true, subtree: true, attributes: true });
     render();
   }

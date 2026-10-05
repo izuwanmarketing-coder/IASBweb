@@ -18,25 +18,26 @@
   <meta name="twitter:description" content="Terokai inventory kereta recond Izuwan Automobile mengikut model, brand, lokasi dan status.">
   <meta name="twitter:image" content="https://thjzzfvoxqqvkgvrdjpr.supabase.co/storage/v1/object/public/branding/company-logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="izuwan.css?v=20260921-1">
+  <link rel="stylesheet" href="izuwan.css?v=20260930-2">
+  <link rel="stylesheet" href="redesign.css?v=20260930-2">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="manifest" href="site.webmanifest">
   </head>
 <body class="glass-pages ">
-  <header class="topbar page-topbar">
-    <a class="brand" href="index.html"><img class="brand-logo hidden" data-brand-logo alt="Logo"><span class="brand-mark" data-brand-mark>IA</span><span><strong data-brand-name>IZUWAN</strong><small>AUTOMOBILE</small></span></a>
-    <button class="menu-btn" id="menuButton" aria-label="Buka menu" aria-expanded="false">Menu</button>
-    <nav class="site-nav" id="siteNav"></nav>
-    <div class="top-actions"><a class="header-cta" href="calculator.html">Semak Bajet</a></div>
+  <header class="site-header" id="siteHeader">
+    <a class="brand" href="/" aria-label="Izuwan Automobile, laman utama"><span class="brand-mark" aria-hidden="true">IA<span></span></span><span><strong>IZUWAN</strong><small>AUTOMOBILE</small></span></a>
+    <nav id="mainNav" aria-label="Navigasi utama"></nav>
+    <a class="nav-whatsapp" data-main-whatsapp data-whatsapp="general" href="https://wa.me/60192788667" target="_blank" rel="noopener">WhatsApp advisor <span aria-hidden="true">↗</span></a>
+    <button class="menu-button" id="menuButton" type="button" aria-label="Buka menu" aria-expanded="false" aria-controls="mainNav"><span>Menu</span><i></i><i></i></button>
   </header>
   <main class="inner-main">
     <div class="promotion-banner hidden" data-promotion-banner></div>
     <section class="page-hero inventory-hero">
-      <span class="eyebrow">INVENTORY SEMASA · JEPUN KE KL</span>
-      <h1>SEMAK STOK.<br>BANDINGKAN UNIT.</h1>
-      <p>Tapis mengikut jenis, bajet bulanan, lokasi dan status. Harga serta anggaran ansuran dipaparkan sebelum anda hubungi advisor.</p>
+      <span class="eyebrow">The collection / Inventory semasa</span>
+      <h1>Temui kereta pilihan anda.</h1>
+      <p>Bandingkan model, harga dan keadaan unit. Tapis pilihan mengikut keperluan anda.</p>
       <div class="inventory-stats hidden" id="inventoryStats">
         <div><strong id="inventoryCount">-</strong><span>pilihan ditemui</span></div>
         <div><strong id="unitCount">-</strong><span>unit boleh ditanya</span></div>
@@ -59,7 +60,7 @@
             <div class="stock-select"><label for="locationFilter">Lokasi</label><select id="locationFilter"><option value="all">Semua lokasi</option></select></div>
             <div class="stock-select"><label for="statusFilter">Status</label><select id="statusFilter"><option value="all">Semua status</option><option value="AVAILABLE">Ready Stock</option><option value="INCOMING">Akan Tiba</option><option value="PORT KLANG">Di Pelabuhan</option><option value="DONE PAID DUTI">Sedia Diproses</option><option value="BOOKED">Ditempah</option><option value="SOLD">Terjual</option></select></div>
             <div class="stock-select"><label for="budgetFilter">Ansuran bulanan (anggaran)</label><select id="budgetFilter" aria-describedby="financeAssumption"><option value="all">Semua bajet</option><option value="1800">Bawah RM1,800</option><option value="2500">Bawah RM2,500</option><option value="3500">Bawah RM3,500</option><option value="5000">Bawah RM5,000</option></select></div>
-            <div class="stock-select"><label for="sortFilter">Susun</label><select id="sortFilter"><option value="latest">Ketibaan terbaru</option><option value="price-low">Harga terendah</option><option value="price-high">Harga tertinggi</option><option value="monthly-low">Ansuran terendah</option><option value="mileage-low">Mileage terendah</option></select></div>
+            <div class="stock-select"><label for="sortFilter">Susun</label><select id="sortFilter"><option value="latest">Pilihan utama</option><option value="price-low">Harga terendah</option><option value="price-high">Harga tertinggi</option><option value="monthly-low">Ansuran terendah</option><option value="mileage-low">Mileage terendah</option></select></div>
             <button class="clear-filters" id="clearFilters" type="button">Reset semua</button>
           </div>
         </details>
@@ -74,12 +75,12 @@
   </dialog>
   <footer class="site-footer"><div class="brand muted"><span class="brand-mark">IA</span><span><strong data-brand-name>IZUWAN</strong><small>AUTOMOBILE</small></span></div><nav><a href="about.html">About</a><a href="select-programme.html">Select Programme</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></nav><p>Japan Reconditioned Car Specialist · Since 2011</p></footer>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20260714-5"></script>
-  <script src="data-service.js?v=20260804-1"></script>
-  <script src="site.js?v=20260921-1"></script>
-  <script src="lead-tracker.js?v=20260624-4"></script>
-  <script src="vehicle-card.js?v=20260921-1"></script>
-  <script src="inventory-page.js?v=20260921-1"></script>
-  <script src="smooth-select.js?v=20260908-1"></script>
+  <script src="config.js?v=20260930-2"></script>
+  <script src="data-service.js?v=20260930-2"></script>
+  <script src="site.js?v=20260930-2"></script>
+  <script src="lead-tracker.js?v=20260930-2"></script>
+  <script src="vehicle-card.js?v=20260930-2"></script>
+  <script src="inventory-page.js?v=20260930-2"></script>
+  <script src="smooth-select.js?v=20260930-2"></script>
 </body>
 </html>

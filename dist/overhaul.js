@@ -13,101 +13,125 @@
   let whatsappNumber = window.IASB_CONFIG?.fallbackWhatsapp || "60192788667";
   const whatsapp = message => `https://wa.me/${String(whatsappNumber).replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
 
-  const { renderCard, money, hasValidPrice } = window.IASBCards;
+  const { renderCard, money } = window.IASBCards;
+  const activeCars = cars => (Array.isArray(cars) ? cars : []).filter(car => car && car.is_active !== false);
+  const isAvailable = car => ["AVAILABLE", "READY STOCK"].includes(String(car.status || "").trim().toUpperCase());
+  const unitCount = car => {
+    const value = Number(car.units);
+    return Number.isFinite(value) && value >= 0 && car.units !== null && car.units !== ""
+      ? Math.floor(value)
+      : 1;
+  };
 
-  /* Live hero chip: real count + PRICELIST date from data (spec §4.1.1) */
-  function updateHeroChip(inventory, settings) {
-    const chip = document.getElementById("heroLiveChip");
+  /* Only explicitly available stock contributes to the ready-stock count. */
+  function updateHeroChip(cars, settings) {
+    const chip = $("heroLiveChip");
     if (!chip) return;
-    const live = (inventory || []).filter(car => car && car.is_active !== false);
-    const units = live.reduce((sum, car) => sum + (Number(car.units) || 1), 0);
-    const pricelist = settings?.pricelist_date || live.find(car => car.campaign_tag)?.campaign_tag?.replace("PRICELIST ", "") || "";
-    chip.innerHTML = `<i aria-hidden="true"></i><b>${units ? units.toLocaleString("en-MY") : "-"} unit</b> ready stock${pricelist ? ` · PRICELIST ${safe(pricelist)}` : ""}`;
+    const live = activeCars(cars);
+    const units = live.filter(isAvailable).reduce((sum, car) => sum + unitCount(car), 0);
+    const pricelist = settings?.pricelist_date || live.find(car => car.campaign_tag)?.campaign_tag?.replace(/^PRICELIST\s*/i, "") || "";
+    chip.innerHTML = `<i aria-hidden="true"></i><b>${units.toLocaleString("en-MY")} unit</b> ready stock${pricelist ? ` · PRICELIST ${safe(pricelist)}` : ""}`;
   }
 
-  /* Featured collection: managed featured first, then photographic
-     coverage + price-ladder spread. 6 slots (spec §4.1.2). */
+  /* Curate only the default view. Search and filters use every active row. */
   function pickFeatured(cars) {
-    const live = (cars || []).filter(car => car && car.is_active !== false);
-    const featured = live.filter(car => car.is_featured);
-    const withPhotos = live.filter(car => !car.is_featured && (car.image_url || (car.gallery_urls || []).length));
-    const withoutPhotos = live.filter(car => !(car.image_url || (car.gallery_urls || []).length));
-    const ladder = cars => {
-      const sorted = [...cars].sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
-      const picks = [];
-      if (sorted.length) picks.push(sorted[0]);
-      if (sorted.length > 2) picks.push(sorted[Math.floor(sorted.length / 2)]);
-      if (sorted.length > 1) picks.push(sorted[sorted.length - 1]);
-      return picks;
-    };
+    const hasPhoto = car => Boolean(media(car.image_url) || (Array.isArray(car.gallery_urls) ? car.gallery_urls : []).some(media));
+    const live = activeCars(cars);
+    const withPhotos = live.filter(hasPhoto);
+    const withoutPhotos = live.filter(car => !hasPhoto(car));
     const picked = new Map();
-    const add = car => { if (car && !picked.has(car.id || car.chassis_no)) picked.set(car.id || car.chassis_no, car); };
-    featured.slice(0, 3).forEach(add);
-    ladder(withPhotos).forEach(add);
-    withPhotos.forEach(add);
-    ladder(withoutPhotos).forEach(add);
-    withoutPhotos.forEach(add);
+    const add = car => {
+      const key = car?.id || car?.chassis_no || car;
+      if (car && !picked.has(key)) picked.set(key, car);
+    };
+    const addGroup = group => {
+      group.filter(car => car.is_featured).slice(0, 3).forEach(add);
+      const ladder = [...group].sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+      if (ladder.length) add(ladder[0]);
+      if (ladder.length > 2) add(ladder[Math.floor(ladder.length / 2)]);
+      if (ladder.length > 1) add(ladder[ladder.length - 1]);
+      group.forEach(add);
+    };
+    addGroup(withPhotos);
+    addGroup(withoutPhotos);
     return [...picked.values()].slice(0, 6);
   }
 
   let inventory = [];
-  let shownCars = [];
-  const cardToCar = new Map();
-  let usingFallback = true;
+  let activeFilter = "all";
+  let inventoryState = "loading";
+  let loadingInventory = false;
+  const homeFilters = $("stockFilters");
+
+  function updateFilterButtons() {
+    homeFilters?.querySelectorAll("button[data-filter]").forEach(button => {
+      const selected = button.dataset.filter === activeFilter;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+  }
+
+  function matchesType(car) {
+    if (activeFilter === "all") return true;
+    if (activeFilter === "Performance") return /amg|type r|gr\s?86|performance|coupe/i.test(`${car.brand} ${car.model} ${car.variant} ${car.type}`);
+    return String(car.type || "").toLowerCase() === activeFilter.toLowerCase();
+  }
+
+  function setStockStatus(message) {
+    if ($("stockStatus")) $("stockStatus").textContent = message;
+  }
 
   function renderInventory() {
     const grid = $("inventoryGrid");
     if (!grid) return;
-    const term = ($("stockSearch")?.value || "").trim().toLowerCase();
-    shownCars = pickFeatured(inventory).filter(car => {
-      if (!term) return true;
-      return [car.brand, car.model, car.variant, car.year].join(" ").toLowerCase().includes(term);
-    });
-    cardToCar.clear();
-    grid.setAttribute("aria-busy", "false");
-    if (!shownCars.length) {
-      grid.innerHTML = `<div class="empty-stock"><h3>Belum jumpa model itu.</h3><p>WhatsApp advisor dan kami akan semak ready stock atau carikan dari Jepun.</p><a class="button button-primary" href="${safe(whatsapp("Salam Izuwan Automobile, boleh bantu cari kereta mengikut spesifikasi dan bajet saya?"))}" target="_blank" rel="noopener">Bantu saya cari ↗</a></div>`;
-      $("stockStatus").textContent = "Tiada padanan";
+    updateFilterButtons();
+    grid.setAttribute("aria-busy", String(inventoryState === "loading"));
+    if (inventoryState === "loading") {
+      grid.innerHTML = '<div class="stock-skeleton" aria-hidden="true"></div>'.repeat(3);
+      setStockStatus("Memuatkan koleksi…");
       return;
     }
-    grid.innerHTML = shownCars.map(car => {
-      const html = renderCard(car, { hrefBase: "car.html" });
-      const wrapper = document.createElement("template");
-      wrapper.innerHTML = html.trim();
-      const card = wrapper.content.firstElementChild;
-      cardToCar.set(card, car);
-      return html;
-    }).join("");
-    /* Re-bind map after innerHTML replace */
-    [...grid.querySelectorAll(".vehicle-card")].forEach(card => {
-      const id = card.querySelector("a[data-car-id]")?.dataset.carId;
-      const car = shownCars.find(item => String(item.id) === String(id));
-      if (car) cardToCar.set(card, car);
-    });
-    $("stockStatus").textContent = `${shownCars.length} unit dipaparkan${usingFallback ? " · pilihan sementara" : ""}`;
+    if (inventoryState === "error") {
+      grid.innerHTML = `<div class="empty-stock inventory-error"><h3>Stok belum dapat dimuatkan.</h3><p>Sambungan ke senarai stok terganggu. Cuba lagi atau hubungi advisor untuk semakan terkini.</p><div class="stock-state-actions"><button class="button button-primary" type="button" data-stock-retry>Cuba lagi ↻</button><a class="button button-ghost" href="${safe(whatsapp("Salam Izuwan Automobile, saya ingin semak senarai stok terkini."))}" target="_blank" rel="noopener">WhatsApp advisor ↗</a></div></div>`;
+      setStockStatus("Stok tidak dapat dimuatkan");
+      return;
+    }
+    const term = ($("stockSearch")?.value || "").trim().toLowerCase();
+    const filtered = inventory.filter(matchesType).filter(car => !term || [
+      car.brand, car.model, car.variant, car.year, car.type, car.exterior_color,
+      car.location, car.marketing_label, car.chassis_no
+    ].join(" ").toLowerCase().includes(term));
+    const isFiltered = Boolean(term || activeFilter !== "all");
+    const shownCars = isFiltered ? filtered : pickFeatured(filtered);
+    if (!shownCars.length) {
+      const emptyInventory = inventory.length === 0;
+      grid.innerHTML = `<div class="empty-stock"><h3>${emptyInventory ? "Koleksi sedang dikemaskini." : "Belum jumpa padanan itu."}</h3><p>${emptyInventory ? "Tiada unit aktif dipaparkan buat masa ini. Hubungi advisor untuk semakan stok atau pilihan sourcing." : "Cuba model atau kategori lain, atau minta advisor bantu carikan unit pilihan anda."}</p><div class="stock-state-actions">${isFiltered ? '<button class="button button-primary" type="button" data-stock-reset>Reset carian</button>' : ''}<a class="button ${isFiltered ? "button-ghost" : "button-primary"}" href="${safe(whatsapp("Salam Izuwan Automobile, boleh bantu cari kereta mengikut spesifikasi dan bajet saya?"))}" target="_blank" rel="noopener">Bantu saya cari ↗</a></div></div>`;
+      setStockStatus(emptyInventory ? "Tiada unit aktif buat masa ini" : "Tiada padanan · cuba reset carian");
+      return;
+    }
+    grid.innerHTML = shownCars.map(car => renderCard(car, { hrefBase: "car.html" })).join("");
+    setStockStatus(isFiltered
+      ? `${filtered.length} pilihan ditemui`
+      : `${shownCars.length} daripada ${inventory.length} pilihan dipaparkan`);
   }
 
-  const homeFilters = $("stockFilters");
-  if ($("stockSearch")) $("stockSearch").addEventListener("input", renderInventory);
-  if (homeFilters) {
-    homeFilters.addEventListener("click", event => {
-      const button = event.target.closest("button[data-filter]");
-      if (!button) return;
-      homeFilters.querySelectorAll("button").forEach(item => item.classList.toggle("active", item === button));
-      const filter = button.dataset.filter;
-      const visible = shownCars.filter(car => {
-        if (filter === "all") return true;
-        if (filter === "Performance") return /amg|type r|gr86|performance|coupe/i.test(`${car.brand} ${car.model} ${car.variant} ${car.type}`);
-        return String(car.type || "").toLowerCase() === filter.toLowerCase();
-      });
-      const visibleIds = new Set(visible.map(car => String(car.id || car.chassis_no)));
-      document.querySelectorAll("#inventoryGrid .vehicle-card").forEach(card => {
-        const id = card.querySelector("a[data-car-id]")?.dataset.carId || "";
-        card.style.display = visibleIds.has(id) ? "" : "none";
-      });
-      $("stockStatus").textContent = `${visible.length} unit dipaparkan`;
-    });
-  }
+  $("stockSearch")?.addEventListener("input", renderInventory);
+  homeFilters?.addEventListener("click", event => {
+    const button = event.target.closest("button[data-filter]");
+    if (!button || !homeFilters.contains(button)) return;
+    activeFilter = button.dataset.filter;
+    renderInventory();
+  });
+  $("inventoryGrid")?.addEventListener("click", event => {
+    if (event.target.closest("[data-stock-retry]")) loadInventory(true);
+    if (event.target.closest("[data-stock-reset]")) {
+      activeFilter = "all";
+      if ($("stockSearch")) $("stockSearch").value = "";
+      renderInventory();
+      $("stockSearch")?.focus();
+    }
+  });
+  updateFilterButtons();
 
   function applyWhatsappLinks() {
     document.querySelectorAll('[data-whatsapp="general"]').forEach(link => {
@@ -123,34 +147,44 @@
     const grid = $("handoverGrid");
     if (!grid) return;
     const valid = (deliveries || []).filter(item => item.is_active !== false && media(item.photo_url)).slice(0, 5);
+    if ($("handover")) $("handover").hidden = !valid.length;
     if (!valid.length) {
-      grid.innerHTML = `<div class="handover-placeholder"><span>IA</span><p>Real handovers, recorded by our team.</p></div><div class="handover-placeholder tall"><span>2011</span><p>Serving Malaysian car owners since 2011.</p></div><div class="handover-placeholder"><span>100%</span><p>Bumiputera recond specialist.</p></div>`;
+      grid.innerHTML = "";
       return;
     }
     grid.innerHTML = valid.map(item => `<article class="handover-card"><img src="${safe(media(item.photo_url))}" alt="${safe(item.title || "Serahan pelanggan Izuwan Automobile")}" loading="lazy"><div><p>${safe(item.title || item.model || "Delivered by Izuwan")}</p><small>${safe(item.model || item.location || "Taman Wahyu, Kuala Lumpur")}</small></div></article>`).join("");
   }
 
-  let fallbackTimer = 0;
-  (async () => {
+  /* Reuse the shell's request, including when it completed before this script
+     loaded. A retry clears only the completed/failed request, never an in-flight one. */
+  async function loadInventory(force = false) {
+    if (loadingInventory) return;
+    loadingInventory = true;
+    inventoryState = "loading";
+    renderInventory();
+    if ($("heroLiveChip")) $("heroLiveChip").textContent = "Menyemak stok terkini…";
     try {
-      if (!window.IASBData?.configured && !window.IASBData?.sheetConfigured) throw new Error("Inventory source unavailable");
-      const data = await window.IASBData.loadPublicData();
+      const data = await window.IASBSite.loadManagedData({ force });
+      if (!Array.isArray(data?.inventory) || data.inventorySource === "none") throw new Error("Inventory source unavailable");
       if (data.settings?.whatsapp_number) whatsappNumber = data.settings.whatsapp_number;
       applyWhatsappLinks();
       renderDeliveries(data.deliveries);
-      updateHeroChip(data.inventory, data.settings);
-      const liveCars = (data.inventory || []).filter(car => car && car.is_active !== false);
-      if (!liveCars.length) throw new Error("No live inventory");
-      window.clearTimeout(fallbackTimer);
-      inventory = liveCars;
-      usingFallback = false;
+      inventory = activeCars(data.inventory);
+      inventoryState = "ready";
+      updateHeroChip(inventory, data.settings);
       renderInventory();
+      calculateLoan();
     } catch (error) {
-      window.clearTimeout(fallbackTimer);
-      updateHeroChip(inventory, null);
-      console.warn("Using fallback inventory.", error);
+      inventoryState = "error";
+      renderInventory();
+      renderDeliveries([]);
+      if ($("heroLiveChip")) $("heroLiveChip").textContent = "Semakan stok tidak tersedia";
+      console.warn("Homepage inventory unavailable.", error);
+    } finally {
+      loadingInventory = false;
     }
-  })();
+  }
+  loadInventory();
 
   /* Finance calculator module — unified IASBSite.monthlyEstimate (spec §5) */
   const priceInput = $("vehiclePrice");
@@ -175,12 +209,18 @@
     $("loanWhatsapp").href = whatsapp(`Salam Izuwan Automobile, saya ingin buat loan pre-check. Harga kereta: ${money(price)}, downpayment: ${money(deposit)} (${depositPct}%), tenure: ${loanYears} tahun, kadar anggaran: ${rate.toFixed(1)}% p.a., ansuran anggaran: ${money(monthly)}/bulan.`);
   }
   if (priceInput) {
+    document.querySelectorAll("[data-years]").forEach(button => {
+      button.setAttribute("aria-pressed", String(Number(button.dataset.years) === loanYears));
+    });
     [priceInput, depositInput, rateInput].forEach(input => input?.addEventListener("input", calculateLoan));
     document.querySelector(".segment-control")?.addEventListener("click", event => {
       const button = event.target.closest("button[data-years]");
       if (!button) return;
       loanYears = Number(button.dataset.years);
-      document.querySelectorAll("[data-years]").forEach(item => item.classList.toggle("active", item === button));
+      document.querySelectorAll("[data-years]").forEach(item => {
+        item.classList.toggle("active", item === button);
+        item.setAttribute("aria-pressed", String(item === button));
+      });
       calculateLoan();
     });
     calculateLoan();

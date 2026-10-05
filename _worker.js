@@ -88,7 +88,87 @@ function safeInventoryCsv(source) {
   }).join("\r\n");
 }
 
+// Explicit cutover contract: a separate sheet containing ONLY these public fields.
+// Keep the 43-column browser format so existing data-service consumers still work.
+const PUBLIC_FIELDS = [
+  ["NO", 15], ["BONDED", 16], ["STOCK NO", 17], ["LOT NO", 18],
+  ["Y", 19], ["M", 20], ["D", 21], ["MODEL", 22], ["CHASSIS NO", 23],
+  ["S", 24], ["COLOUR", 25], ["MILEAGE", 26], ["SPECS", 27],
+  ["STATUS", 28], ["SELLING PRICE", 29], ["GRADE", 42]
+];
+const publicHeaderKey = value => String(value).trim().toUpperCase().replace(/[ _]+/g, " ");
+
+function parsePublicCsv(source) {
+  const text = String(source).replace(/^\uFEFF/, "");
+  const rows = [];
+  let row = [], cell = "", state = "start";
+  function pushCell() { row.push(cell); cell = ""; state = "start"; }
+  function pushRow() { pushCell(); if (row.some(value => value.trim())) rows.push(row); row = []; }
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (state === "quoted") {
+      if (char === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++; } else state = "closed";
+      } else cell += char;
+    } else if (char === ',') pushCell();
+    else if (char === '\r' || char === '\n') { if (char === '\r' && text[i + 1] === '\n') i++; pushRow(); }
+    else if (char === '"' && state === "start") state = "quoted";
+    else {
+      if (state === "closed" || char === '"') throw new Error("Malformed public CSV");
+      cell += char; state = "plain";
+    }
+  }
+  if (state === "quoted") throw new Error("Unclosed public CSV quote");
+  if (cell || row.length || state !== "start") pushRow();
+  return rows;
+}
+
+function publicInventoryCsv(source, configuredDate) {
+  const rows = parsePublicCsv(source);
+  if (!rows.length) throw new Error("Missing public headers");
+  const headers = rows[0].map(publicHeaderKey);
+  const required = PUBLIC_FIELDS.map(([name]) => name);
+  if (new Set(headers).size !== headers.length || headers.some(name => !required.includes(name) && name !== "PRICELIST DATE") || required.some(name => !headers.includes(name))) throw new Error("Unexpected public inventory schema");
+  let date = configuredDate ? parsePricelistDate(configuredDate) : null;
+  if (configuredDate && !date) throw new Error("Invalid public pricelist date");
+  const outputHeader = Array(43).fill("");
+  PUBLIC_FIELDS.forEach(([name, index]) => outputHeader[index] = name);
+  const output = [outputHeader];
+  for (const row of rows.slice(1)) {
+    if (row.length !== headers.length) throw new Error("Unexpected public row width");
+    const dateIndex = headers.indexOf("PRICELIST DATE");
+    if (dateIndex >= 0 && row[dateIndex].trim()) {
+      const parsed = parsePricelistDate(row[dateIndex]);
+      if (!parsed) throw new Error("Invalid public pricelist date");
+      if (!date || parsed.timestamp > date.timestamp) date = parsed;
+    }
+    const safeRow = Array(43).fill("");
+    PUBLIC_FIELDS.forEach(([name, index]) => safeRow[index] = row[headers.indexOf(name)]);
+    output.push(safeRow);
+  }
+  return { csv: output.map(row => row.map(csvCell).join(",")).join("\r\n"), date: date?.label || "" };
+}
+
+async function publicInventoryResponse(env) {
+  // Once configured, ANY failure is closed. Never consult the original source.
+  try {
+    const id = String(env.INVENTORY_PUBLIC_SHEET_ID || "").trim();
+    if (!/^[A-Za-z0-9_-]{10,120}$/.test(id) || id === DEFAULT_SHEET_ID || id === String(env.INVENTORY_SHEET_ID || "").trim()) throw new Error("Invalid replacement source");
+    const query = new URLSearchParams({ tqx: "out:csv" });
+    if (env.INVENTORY_PUBLIC_SHEET_NAME) query.set("sheet", env.INVENTORY_PUBLIC_SHEET_NAME);
+    const response = await fetch(`https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?${query}`, { headers: { Accept: "text/csv" }, cf: { cacheEverything: true, cacheTtl: 300 } });
+    if (!response.ok) throw new Error("Public source unavailable");
+    const result = publicInventoryCsv(await response.text(), env.INVENTORY_PUBLIC_PRICELIST_DATE);
+    const headers = { "Content-Type": "text/csv; charset=utf-8", "Cache-Control": "public, max-age=60, s-maxage=300", "X-Content-Type-Options": "nosniff" };
+    if (result.date) headers["X-Inventory-Pricelist-Date"] = result.date;
+    return new Response(result.csv, { headers });
+  } catch {
+    return Response.json({ error: "Public inventory unavailable" }, { status: 502, headers: { "Cache-Control": "no-store" } });
+  }
+}
+
 async function inventoryResponse(env) {
+  if (env.INVENTORY_PUBLIC_SHEET_ID !== undefined) return publicInventoryResponse(env);
   const sheetId = env.INVENTORY_SHEET_ID || DEFAULT_SHEET_ID;
   const sheetName = env.INVENTORY_SHEET_NAME || DEFAULT_SHEET_NAME;
   const sourceUrl = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
