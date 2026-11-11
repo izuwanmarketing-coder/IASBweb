@@ -39,7 +39,7 @@
     if (!document.querySelector(".skip-link")) {
       const skipLink = document.createElement("a");
       skipLink.className = "skip-link";
-      skipLink.href = "#main-content";
+      skipLink.href = `#${mainContent.id}`;
       skipLink.textContent = "Langkau ke kandungan utama";
       document.body.prepend(skipLink);
     }

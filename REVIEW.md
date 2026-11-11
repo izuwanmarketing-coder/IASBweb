@@ -69,4 +69,6 @@ The hero is one integrated photographic stage with a red headline panel, immedia
 - A dated news-snapshot.json is the explicitly labelled fallback if the live endpoint fails. News arrives on page access after cache expiry; stored fallback is refreshed when rebuilding the release snapshot.
 - Four additional tests cover attribution/decoding, unsafe URLs and invalid dates, partial failures/deduplication, and total outage without touching inventory. 63 tests pass, syntax/link checks and 66-file build pass.
 - Browser checked search, source filter, empty state, reset and load more (12 to 24), plus 390 px overflow.
-- Production release: pending push and live verification.
+- Production release 40a51c1 pushed to main. Cloudflare Pages deployment 6fc65d99-8d12-42c8-92ce-a65d9b430a92 succeeded. Both apex and www serve the new design; /news and /api/automotive-news return 200 with 46 articles and all three sources. /api/inventory-sheet still returns 200. Live news search returns the expected Mazda3 result.
+- The separate Workers Builds check failed; the domain-serving Cloudflare Pages deployment succeeded. No hosting migration was performed.
+- Final accessibility correction: skip link uses the actual main element ID, including pages that already define their own ID.
