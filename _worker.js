@@ -203,9 +203,69 @@ async function inventoryResponse(env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/api/automotive-news" && request.method === "GET") {
+      return automotiveNewsResponse(request);
+    }
     if (url.pathname === "/api/inventory-sheet" && request.method === "GET") {
       return inventoryResponse(env);
     }
     return env.ASSETS.fetch(request);
   }
 };
+
+// Public newsroom headlines only. No article bodies, private sources or arbitrary URLs.
+const NEWS_SOURCES = [
+  { name: "Toyota Global", region: "Jepun · Global", url: "https://global.toyota/export/en/allnews_rss.xml", hosts: ["global.toyota", "toyotatimes.jp"] },
+  { name: "Stellantis", region: "Eropah · Global", url: "https://www.stellantis.com/en/news/press-releases.rss.xml", hosts: ["www.stellantis.com"] },
+  { name: "Mazda USA", region: "Amerika Syarikat", url: "https://news.mazdausa.com/news-releases?pagetemplate=rss", hosts: ["news.mazdausa.com"] }
+];
+function newsText(value) {
+  return String(value || "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/<[^>]*>/g, "").replace(/&#(x[\da-f]+|\d+);/gi, (_, code) => {
+    const point = code[0].toLowerCase() === "x" ? parseInt(code.slice(1), 16) : Number(code);
+    return point > 0 && point <= 0x10ffff ? String.fromCodePoint(point) : "";
+  }).replace(/&(amp|lt|gt|quot|apos|nbsp);/g, (_, key) => ({ amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " }[key])).replace(/\s+/g, " ").trim();
+}
+function parseNews(xml, source, now = Date.now()) {
+  return [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].flatMap(([, block]) => {
+    const field = tag => newsText(block.match(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"))?.[1]);
+    const title = field("title").slice(0, 350);
+    const date = Date.parse(field("pubDate"));
+    try {
+      const url = new URL(field("link"));
+      if (!title || !Number.isFinite(date) || date > now + 3600000 || url.protocol !== "https:" || !source.hosts.includes(url.hostname) || url.username || url.password) return [];
+      return [{ title, url: url.href, publishedAt: new Date(date).toISOString(), source: source.name, region: source.region }];
+    } catch { return []; }
+  });
+}
+async function collectNews(fetcher = fetch) {
+  const results = await Promise.allSettled(NEWS_SOURCES.map(async source => {
+    const response = await fetcher(source.url, { headers: { Accept: "application/rss+xml, application/xml, text/xml" }, signal: AbortSignal.timeout(8000), cf: { cacheEverything: true, cacheTtl: 900 } });
+    if (!response.ok) throw new Error("News source unavailable");
+    const xml = await response.text();
+    if (xml.length > 2000000) throw new Error("News source too large");
+    const items = parseNews(xml, source);
+    if (!items.length) throw new Error("Empty news source");
+    return items;
+  }));
+  const seen = new Set();
+  const articles = results.flatMap(result => result.status === "fulfilled" ? result.value : []).sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)).filter(item => {
+    const key = item.url.split("?")[0];
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  }).slice(0, 90);
+  if (!articles.length) throw new Error("News unavailable");
+  return { fetchedAt: new Date().toISOString(), partial: results.some(result => result.status === "rejected"), articles };
+}
+async function automotiveNewsResponse(request) {
+  const key = new Request(new URL("/api/automotive-news", request.url).href);
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  const cached = cache ? await cache.match(key) : null;
+  if (cached) return cached;
+  try {
+    const response = Response.json(await collectNews(), { headers: { "Cache-Control": "public, max-age=300, s-maxage=900", "X-Content-Type-Options": "nosniff" } });
+    if (cache) await cache.put(key, response.clone());
+    return response;
+  } catch {
+    return Response.json({ error: "News temporarily unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
+}

@@ -24,6 +24,24 @@
   let activeGallery = null;
   let activePhoto = 0;
   let lastManagedData = null;
+  let inventoryLoading = true;
+  let restoreScroll = false;
+  try { restoreScroll = sessionStorage.getItem("iasb-restore-inventory") === "true"; } catch {}
+  // URLs are the shareable source of truth; session storage only keeps the
+  // return destination and scroll position. Unknown query parameters survive.
+  const filterKeys = ["search", "type", "brand", "location", "status", "budget", "sort", "limit"];
+  function rememberFilters() {
+    if (!window.history?.replaceState || typeof URL === "undefined") return;
+    const url = new URL(window.location.href);
+    const values = [searchTerm, activeType, brand, locationName, status, budget, sortMode, String(visibleLimit)];
+    filterKeys.forEach((key, index) => {
+      const value = values[index];
+      if (!value || value === "all" || value === "latest" || (key === "limit" && value === "12")) url.searchParams.delete(key);
+      else url.searchParams.set(key, value);
+    });
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    try { sessionStorage.setItem("iasb-inventory-return", url.pathname + url.search); } catch {}
+  }
 
   const TYPES = ["all", "MPV", "SUV", "Sedan", "Hatchback", "Performance", "Coupe", "Convertible", "Mini MPV"];
   const TYPE_LABELS = { all: "Semua", "Mini MPV": "Mini MPV" };
@@ -144,6 +162,11 @@
   }
 
   function render() {
+    rememberFilters();
+    if (inventoryLoading && !cars.length) {
+      $("inventorySummary").textContent = "Memuatkan inventory terkini…";
+      return;
+    }
     if (!cars.length) {
       showState(
         "empty",
@@ -167,6 +190,7 @@
     const activeFilterCount = [brand, locationName, status, budget].filter(value => value !== "all").length + (sortMode !== "latest" ? 1 : 0);
     $("filterSummaryLabel").textContent = activeFilterCount ? `Filter aktif (${activeFilterCount})` : "Tapis lanjut";
     $("filterSummaryHint").textContent = activeFilterCount ? "Tap untuk ubah atau reset" : "Brand, lokasi, status, bajet & susunan";
+    if ($("openFilterSheet")) $("openFilterSheet").textContent = activeFilterCount ? `Tapis (${activeFilterCount})` : "Tapis ↗";
     const assumptions = window.IASBSite?.financeAssumptions() || { depositPct: 10, years: 9, rate: 3.2 };
     $("inventorySummary").textContent = `${filtered.length} pilihan ditemui · ${Math.min(visibleLimit, filtered.length)} dipaparkan.`;
     $("financeAssumption").textContent = `Anggaran ansuran berdasarkan deposit ${assumptions.depositPct}%, ${assumptions.years} tahun dan kadar ${assumptions.rate}% setahun. Tertakluk kepada kelulusan bank.`;
@@ -203,6 +227,14 @@
       if (!car) return;
       link.href = window.IASBSite.whatsappUrl(link.dataset.message || window.IASBCards.enquiryMessage(car));
     });
+    if (restoreScroll && window.requestAnimationFrame) {
+      restoreScroll = false;
+      try {
+        const scroll = Number(sessionStorage.getItem("iasb-inventory-scroll")) || 0;
+        sessionStorage.removeItem("iasb-restore-inventory");
+        window.requestAnimationFrame(() => window.scrollTo({ top: scroll, behavior: "instant" }));
+      } catch {}
+    }
   }
 
   function openGallery(carKey) {
@@ -268,6 +300,9 @@
       }
     });
     $("carGrid").addEventListener("click", event => {
+      if (event.target.closest('a[href*="car?"]') || event.target.closest('a[href*="car.html?"]')) {
+        try { sessionStorage.setItem("iasb-inventory-scroll", String(window.scrollY)); } catch {}
+      }
       if (event.target.closest("[data-retry-inventory]")) { loadInventory(true); return; }
       if (event.target.closest("[data-load-more]")) {
         const firstNewCard = visibleLimit + 1;
@@ -319,6 +354,7 @@
   }
 
   function initialize(nextCars, source) {
+    inventoryLoading = false;
     cars = (Array.isArray(nextCars) ? nextCars : []).map((car, index) => ({
       ...car,
       _sourceIndex: car._sourceIndex ?? index,
@@ -328,7 +364,6 @@
     locationName = populateSelect("locationFilter", cars.map(car => car.location), "Semua lokasi", locationName);
     status = populateSelect("statusFilter", cars.map(car => normalizedStatus(car.status)), "Semua status", status, value => window.IASBCards.statusInfo(value).label);
     if (activeType !== "all" && !cars.some(typeMatcher)) activeType = "all";
-    visibleLimit = 12;
     renderTypeChips();
     render();
     document.body.dataset.inventorySource = source;
@@ -342,6 +377,7 @@
   }
 
   function showLoadError() {
+    inventoryLoading = false;
     showState(
       "error",
       "Inventory tidak dapat dimuatkan buat sementara waktu",
@@ -351,6 +387,7 @@
   }
 
   function loadInventory(force = false) {
+    inventoryLoading = true;
     $("inventorySummary").textContent = "Memuatkan inventory terkini…";
     $("carGrid").innerHTML = '<div class="inventory-skeleton"></div><div class="inventory-skeleton"></div><div class="inventory-skeleton"></div>';
     if (window.IASBSite?.loadManagedData) {
@@ -362,10 +399,48 @@
   }
 
   if (typeof URLSearchParams !== "undefined") {
-    searchTerm = new URLSearchParams(window.location?.search || "").get("search") || "";
+    const params = new URLSearchParams(window.location?.search || "");
+    searchTerm = params.get("search") || "";
+    activeType = params.get("type") || "all";
+    brand = params.get("brand") || "all";
+    locationName = params.get("location") || "all";
+    status = params.get("status") || "all";
+    budget = ["1800", "2500", "3500", "5000"].includes(params.get("budget")) ? params.get("budget") : "all";
+    sortMode = ["price-low", "price-high", "monthly-low", "mileage-low"].includes(params.get("sort")) ? params.get("sort") : "latest";
+    visibleLimit = Math.min(600, Math.max(12, Number(params.get("limit")) || 12));
     $("stockSearch").value = searchTerm;
+    $("budgetFilter").value = budget;
+    $("sortFilter").value = sortMode;
   }
   bindStaticControls();
+  // Move the same controls into a native dialog: no duplicate IDs or logic.
+  const filterDialog = $("filterSheet");
+  if (filterDialog) {
+    const panel = document.querySelector(".inventory-filter-panel");
+    const desktopHost = document.querySelector(".inventory-more-filters");
+    let draft = null;
+    const fields = ["brandFilter", "locationFilter", "statusFilter", "budgetFilter", "sortFilter"];
+    $("openFilterSheet").addEventListener("click", () => {
+      draft = { values: fields.map(id => $(id).value), searchTerm, activeType, visibleLimit };
+      $("filterSheetBody").appendChild(panel);
+      filterDialog.showModal();
+    });
+    $("applyFilterSheet").addEventListener("click", () => { draft = null; filterDialog.close(); });
+    $("closeFilterSheet").addEventListener("click", () => filterDialog.close());
+    $("resetFilterSheet").addEventListener("click", resetAll);
+    filterDialog.addEventListener("close", () => {
+      if (draft) {
+        [brand, locationName, status, budget, sortMode] = draft.values;
+        searchTerm = draft.searchTerm; activeType = draft.activeType; visibleLimit = draft.visibleLimit;
+        $("stockSearch").value = searchTerm; renderTypeChips();
+        fields.forEach((id, index) => setSelectValue(id, draft.values[index]));
+        render();
+      }
+      desktopHost.appendChild(panel);
+      $("openFilterSheet").focus();
+    });
+    filterDialog.addEventListener("click", event => { if (event.target === filterDialog) filterDialog.close(); });
+  }
   window.addEventListener("iasb:data", event => acceptManagedData(event.detail));
   window.addEventListener("iasb:error", showLoadError);
   loadInventory();

@@ -8,6 +8,12 @@ http.createServer(async (req, res) => {
   if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405); res.end('Read-only preview'); return; }
   const url = new URL(req.url, 'http://localhost');
   try {
+    if (url.pathname === '/api/automotive-news') {
+      const workerSource = await readFile(new URL('../_worker.js', import.meta.url), 'utf8');
+      const { default: worker } = await import('data:text/javascript;base64,' + Buffer.from(workerSource).toString('base64'));
+      const result = await worker.fetch(new Request('http://localhost:4173/api/automotive-news'), {});
+      res.writeHead(result.status, { 'Content-Type': 'application/json' }); res.end(await result.text()); return;
+    }
     if (url.pathname === '/api/inventory-sheet') {
       // Read the existing public, sanitized endpoint. Never query the private sheet.
       const data = await fetch('https://izuwanautomobile.com/api/inventory-sheet', { signal: AbortSignal.timeout(12000) });
@@ -18,7 +24,7 @@ http.createServer(async (req, res) => {
     if (name.endsWith('/')) name += 'index.html';
     if (!path.extname(name)) name += '.html';
     const filename = path.resolve(root, '.' + name);
-    if (!filename.startsWith(root + path.sep) || name.split('/').some(s => s.startsWith('.')) || !['.html', '.css', '.js', '.png', '.jpg', '.svg', '.webmanifest'].includes(path.extname(filename))) { res.writeHead(403); res.end('Not a public asset'); return; }
+    if (!filename.startsWith(root + path.sep) || name.split('/').some(s => s.startsWith('.')) || !['.html', '.css', '.js', '.png', '.jpg', '.svg', '.json', '.webmanifest'].includes(path.extname(filename))) { res.writeHead(403); res.end('Not a public asset'); return; }
     let body = await readFile(filename);
     if (filename.endsWith('.html')) body = Buffer.from(body.toString().replace('<head>', '<head><script>window.IASB_PREVIEW=true;</script>'));
     res.writeHead(200, { 'Content-Type': types[path.extname(filename)] || 'application/octet-stream', 'Cache-Control': 'no-store' });

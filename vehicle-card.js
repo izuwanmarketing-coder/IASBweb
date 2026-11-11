@@ -72,7 +72,7 @@
     const reference = String(car.marketing_label || car.chassis_no || "").replace(/^sheet:/, "");
     const context = detail ? ` (${detail})` : "";
     const ref = reference ? ` [Ref: ${reference}]` : "";
-    return `[Inventory Page] Hai, saya berminat dengan ${name}${context}.${ref} Unit masih available?`;
+    return `[Inventory Page] Hai, saya berminat dengan ${name}${context}.${ref} Unit masih available?${car.id ? ` https://izuwanautomobile.com/car?id=${encodeURIComponent(car.id)}` : ""}`;
   }
 
   /**
@@ -99,7 +99,7 @@
     const campaign = car.campaign_tag ? `<span>${safeText(car.campaign_tag)}</span>` : "";
     const photoCount = gallery.length > 1 ? `<span>${gallery.length} gambar</span>` : "";
     const photoContent = photo
-        ? `<img src="${safeText(photo)}" alt="${safeText(name)}${car.year ? " " + safeText(car.year) : ""}, gambar unit" loading="lazy" decoding="async">`
+        ? `<img src="${safeText(photo)}" alt="${safeText(name)}${car.year ? " " + safeText(car.year) : ""}, gambar unit" loading="lazy" decoding="async" width="720" height="480">`
       : `<div class="vehicle-placeholder" role="img" aria-label="Gambar unit belum tersedia">
           <svg class="vehicle-placeholder-icon" viewBox="0 0 64 40" width="64" height="40" fill="none" aria-hidden="true"><path d="M10 25l5-13a4 4 0 0 1 4-3h26a4 4 0 0 1 4 3l5 13M8 25h48v9H8zM20 34v3M44 34v3M17 29h5M42 29h5M18 14h28l3 10H15z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span class="vehicle-placeholder-copy">Gambar unit belum tersedia</span>
@@ -126,7 +126,7 @@
         ${titleLine ? `<p class="vehicle-facts">${safeText(titleLine)}</p>` : ""}
         <div class="inventory-price">
           <div>${priceBlock(car)}</div>
-          ${priceValid ? `<a class="inventory-calc-link" href="calculator.html?price=${Number(car.price) || 0}&car=${encodeURIComponent(name + (car.variant ? ` - ${car.variant}` : ""))}" data-lead-action="inventory_calculator" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(name)}">Kira tepat →</a>` : ""}
+          ${priceValid ? `<a class="inventory-calc-link" href="calculator.html?price=${Number(car.price) || 0}&car=${encodeURIComponent(name + (car.variant ? ` - ${car.variant}` : ""))}" data-lead-action="inventory_calculator" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(name)}">Ubah anggaran →</a>` : ""}
         </div>
         ${actions}
       </div>

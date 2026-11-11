@@ -7,7 +7,7 @@
    surfaces. Fonts: Saira (display) + Barlow (UI). tnum on all data.
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Saira:wght@500;600;700;800&family=Saira+Semi+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap');
 
 :root {
   --bg: #0E1013;
@@ -35,7 +35,7 @@
   --busy-soft: #EDE8F6;
   --gone: #75797E;
   --gone-soft: #EEEFEA;
-  --display: "Saira", "Arial Narrow", Arial, sans-serif;
+  --display: "Saira Condensed", "Arial Narrow", Arial, sans-serif;
   --body: "Barlow", "Segoe UI", sans-serif;
   --content: 1240px;
   --gutter: clamp(16px, 4vw, 40px);

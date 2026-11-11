@@ -99,7 +99,7 @@
         <img class="car-main-image" id="carMainImage" src="${safeText(photos[0])}" alt="${safeText(title)}, gambar 1 daripada ${photos.length}">
         <span class="car-image-expand">Lihat gambar penuh</span>
       </button>
-      ${photos.length > 1 ? `<div class="car-thumbs" aria-label="Pilihan gambar">${photos.slice(0, 12).map((src, index) => `<button type="button" data-car-thumb-index="${index}" class="${index === 0 ? "active" : ""}" aria-label="Lihat gambar ${index + 1} daripada ${photos.length}"><img src="${safeText(src)}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}`;
+      ${photos.length > 1 ? `<div class="car-thumbs" aria-label="Pilihan gambar">${photos.map((src, index) => `<button type="button" data-car-thumb-index="${index}" aria-pressed="${index === 0}" class="${index === 0 ? "active" : ""}" aria-label="Lihat gambar ${index + 1} daripada ${photos.length}"><img src="${safeText(src)}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}`;
   }
 
   function storyBlock(car) {
@@ -167,14 +167,14 @@
     if (!car) return notFound();
     const detailLine = [car.year, car.grade, car.variant].filter(Boolean).join(" · ") || "Japan reconditioned unit";
     const title = `${car.brand || ""} ${car.model || ""}`.trim() || "Izuwan ready stock";
-    const photos = photosFor(car);
+    const photos = window.IASBCards.mediaUrls(car);
     const validPrice = hasValidPrice(car.price);
     const monthly = validPrice ? paymentEstimate(car.price) : 0;
     const assumptions = window.IASBSite?.financeAssumptions() || { depositPct: 10, years: 9, rate: 3.2 };
     const defaultDownpayment = Math.round((Number(car.price) || 0) * assumptions.depositPct / 100);
     const updated = formatUpdated(car.updated_at || car.created_at);
     const state = statusInfo(car.status);
-    const whatsappMessage = `[Car Detail Page] Hai, saya berminat dengan ${title}${detailLine ? ` (${detailLine})` : ""}. Boleh share details dan availability terkini?`;
+    const whatsappMessage = `[Car Detail Page] Hai, saya berminat dengan ${title}${detailLine ? ` (${detailLine})` : ""}. Boleh share details dan availability terkini? https://izuwanautomobile.com/car${window.location.search}`;
     document.title = `${title} | Izuwan Automobile`;
     const breadcrumb = document.getElementById("breadcrumbCar");
     if (breadcrumb) breadcrumb.textContent = title;
@@ -237,7 +237,7 @@
             ? `<em>± ${money(monthly)}/bulan <b class="tenure">(${assumptions.depositPct}% deposit · ${assumptions.years} tahun · ${assumptions.rate}% p.a. anggaran)</b></em>
                <small class="car-price-note">Anggaran kadar rata. Tertakluk kepada kelulusan bank, CCRIS/CTOS dan dokumen. Insurance dan OTR disahkan bersama advisor.</small>`
             : `<em>Harga belum disahkan. Hubungi advisor untuk harga terkini.</em>`}
-          ${validPrice ? `<a class="car-price-calc" href="calculator.html?price=${Number(car.price) || 0}&car=${encodeURIComponent(title)}" data-lead-action="car_calculator" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(title)}">Kira ansuran tepat</a>` : ""}
+          ${validPrice ? `<a class="car-price-calc" href="calculator.html?price=${Number(car.price) || 0}&car=${encodeURIComponent(title)}" data-lead-action="car_calculator" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(title)}">Ubah anggaran ansuran</a>` : ""}
         </div>
         <div class="car-detail-actions">
           <a href="${window.IASBSite.whatsappUrl(whatsappMessage)}" data-lead-action="car_whatsapp" data-car-id="${safeText(car.id || "")}" data-car-name="${safeText(title)}" target="_blank" rel="noopener">Tanya advisor di WhatsApp</a>
@@ -251,28 +251,38 @@
     <section class="car-detail-tools">
       ${validPrice ? `<form class="payment-estimator" id="paymentEstimator">
         <span class="eyebrow">PAYMENT ESTIMATOR</span>
-        <h2>Quick monthly estimate.</h2>
+        <h2>Rancang ansuran anda.</h2>
         <p class="estimator-note">Ubah deposit dan tempoh. Kadar ini anggaran awal, kadar sebenar bergantung kepada bank.</p>
         <div class="form-grid">
-          <label>Downpayment (RM)<input id="estimateDownpayment" type="number" min="0" value="${defaultDownpayment}"></label>
+          <label>Deposit (RM)<input id="estimateDownpayment" type="number" min="0" max="${Number(car.price)}" value="${defaultDownpayment}"></label>
           <label>Tenure<select id="estimateYears"><option value="5">5 years</option><option value="7">7 years</option><option value="9" selected>9 years</option></select></label>
-          <label class="estimator-output-label">Monthly estimate<output id="estimateOutput">${money(monthly)}</output></label>
+          <label class="estimator-output-label">Anggaran bulanan<output id="estimateOutput">${money(monthly)}</output></label>
         </div>
         <small class="estimator-disclaimer">Anggaran kadar rata (10%/9 thn/3.2% default). Tertakluk kepada kelulusan bank.</small>
       </form>` : `<div class="payment-estimator" id="paymentEstimator"><span class="eyebrow">PAYMENT ESTIMATOR</span><h2>Harga perlu disahkan dahulu.</h2><p>Hubungi advisor Izuwan untuk selling price terkini sebelum membuat anggaran pembiayaan.</p></div>`}
       <form class="viewing-card" id="viewingForm">
         <span class="eyebrow">VIEWING SLOT</span>
-        <h2>Book a showroom viewing.</h2>
+        <h2>Jom lihat sendiri.</h2>
         <p class="estimator-note">Pilih tarikh dan masa. Advisor akan mengesahkan slot dalam waktu operasi. Unit ini di ${safeText(car.location || "showroom kami")}.</p>
         <div class="form-grid">
           <label>Date<input id="viewingDate" type="date"></label>
-          <label>Preferred time<select id="viewingTime"><option>Morning</option><option>Afternoon</option><option>Evening</option></select></label>
+          <label>Masa pilihan<select id="viewingTime"><option>Morning</option><option>Afternoon</option><option>Evening</option></select></label>
         </div>
         <button type="submit">Hantar permintaan viewing</button>
       </form>
     </section>
     ${evidenceStrip(car, title)}
     ${relatedRail(car, allCars)}`;
+
+    try {
+      const saved = sessionStorage.getItem("iasb-inventory-return");
+      if (saved && /^\/inventory(?:\.html)?(?:\?|$)/.test(saved)) {
+        document.querySelectorAll('.breadcrumb-nav a, .car-detail-actions .ghost').forEach(link => {
+          link.href = saved;
+          link.addEventListener("click", () => { try { sessionStorage.setItem("iasb-restore-inventory", "true"); } catch {} });
+        });
+      }
+    } catch {}
 
     /* Mobile sticky bar (spec §3.3): two actions, appears after price block */
     const mobileWhatsapp = document.querySelector("[data-mobile-whatsapp]");
@@ -348,7 +358,7 @@
       const updateEstimate = () => {
         const downEl = document.getElementById("estimateDownpayment");
         const yearsEl = document.getElementById("estimateYears");
-        const bad = downEl.validity.badInput || downEl.validity.rangeUnderflow || !Number.isFinite(Number(downEl.value)) || Number(downEl.value) < 0;
+        const bad = downEl.validity.badInput || downEl.validity.rangeUnderflow || downEl.validity.rangeOverflow || !Number.isFinite(Number(downEl.value)) || Number(downEl.value) < 0;
         downEl.setAttribute("aria-invalid", String(bad));
         if (bad) {
           document.getElementById("estimateOutput").textContent = "Semak input";
@@ -363,7 +373,7 @@
       event.preventDefault();
       const date = document.getElementById("viewingDate").value || "Flexible date";
       const time = document.getElementById("viewingTime").value;
-      const message = `[Viewing Request] Hai Izuwan, saya nak book viewing untuk ${title} (${detailLine}). Preferred date/time: ${date}, ${time}.`;
+      const message = `[Viewing Request] Hai Izuwan, saya nak book viewing untuk ${title} (${detailLine}). Preferred date/time: ${date}, ${time}. https://izuwanautomobile.com/car${window.location.search}`;
       window.IASBLeadTracker?.track("viewing_request", { car_id: car.id, car_name: title, metadata: { date, time } });
       window.open(window.IASBSite.whatsappUrl(message), "_blank", "noopener");
     });
@@ -373,7 +383,7 @@
     const reduceGalleryMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let galleryCloseTimer = 0;
     const animateGalleryImage = image => {
-      if (reduceGalleryMotion || !dialog.open || !image) return;
+      if (reduceGalleryMotion || !image) return;
       image.classList.remove("is-changing");
       void image.offsetWidth;
       image.classList.add("is-changing");
@@ -399,7 +409,11 @@
       if (dialogTitle) dialogTitle.textContent = title;
       const counter = document.getElementById("carImageCounter");
       if (counter) counter.textContent = `${activePhoto + 1} / ${photos.length}`;
-      document.querySelectorAll("[data-car-thumb-index]").forEach(item => item.classList.toggle("active", Number(item.dataset.carThumbIndex) === activePhoto));
+      document.querySelectorAll("[data-car-thumb-index]").forEach(item => {
+        const selected = Number(item.dataset.carThumbIndex) === activePhoto;
+        item.classList.toggle("active", selected);
+        item.setAttribute("aria-pressed", String(selected));
+      });
       const prev = document.getElementById("carImagePrev");
       const next = document.getElementById("carImageNext");
       if (prev) prev.hidden = photos.length < 2;

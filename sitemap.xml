@@ -13,5 +13,6 @@
   <url><loc>https://izuwanautomobile.com/otr</loc><priority>0.4</priority></url>
   <url><loc>https://izuwanautomobile.com/privacy</loc><priority>0.2</priority></url>
   <url><loc>https://izuwanautomobile.com/terms</loc><priority>0.2</priority></url>
+  <url><loc>https://izuwanautomobile.com/news</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
 </urlset>
 

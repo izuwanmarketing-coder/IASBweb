@@ -71,12 +71,13 @@
       { label: "OTR Calculator", href: "/otr", match: "otr.html" },
       { label: "Model Guides", href: "/model-guides", match: "model-guides.html" }
     ] },
+    { label: "Dunia Auto", href: "/news", match: ["news.html"] },
     { label: "Showroom", href: "/contact", match: ["contact.html"] }
   ];
 
   function applyNav() {
     document.querySelectorAll('.site-header .brand, footer .brand').forEach(brand => {
-      const darkFooter = brand.closest('footer') && document.body.classList.contains('redesign-home');
+      const darkFooter = Boolean(brand.closest('footer'));
       const logo = darkFooter ? 'company-logo.png' : 'company-logo-light.png';
       brand.innerHTML = `<img class="official-brand-logo" src="/assets/${logo}" alt="Izuwan Automobile — Imported Car Dealer" width="${darkFooter ? 2911 : 2067}" height="${darkFooter ? 1070 : 761}">`;
     });
@@ -109,6 +110,7 @@
       footerNav.innerHTML = `
         <a href="/inventory">Inventory</a>
         <a href="/select-programme">Izuwan Select</a>
+        <a href="/news">Dunia Auto</a>
         <a href="/about">About</a>
         <a href="/contact">Showroom</a>
         <a href="/privacy">Privacy</a>
@@ -133,6 +135,7 @@
         if (event.key !== "Escape" || !mainNav.classList.contains("open")) return;
         mainNav.classList.remove("open");
         menuButton.setAttribute("aria-expanded", "false");
+        menuButton.setAttribute("aria-label", "Buka menu");
         menuButton.focus();
       });
     }
@@ -163,11 +166,39 @@
   }
   bindScrollUi();
 
+  // Public photos may be removed upstream. Keep the link/gallery usable and
+  // announce the missing image without substituting another vehicle's photo.
+  document.addEventListener("error", event => {
+    const image = event.target;
+    if (image.tagName !== "IMG" || !image.closest(".vehicle-media, .car-main-image-button, .car-image-viewer, .handover-card")) return;
+    image.hidden = true;
+    const parent = image.parentElement;
+    if (parent.querySelector(".media-failure")) return;
+    const message = document.createElement("span");
+    message.className = "media-failure";
+    message.setAttribute("role", "status");
+    message.textContent = "Foto tidak dapat dimuatkan. Minta foto unit daripada advisor.";
+    parent.appendChild(message);
+  }, true);
+  document.addEventListener("load", event => {
+    const image = event.target;
+    if (image.tagName !== "IMG") return;
+    const message = image.parentElement?.querySelector(".media-failure");
+    if (message) { message.remove(); image.hidden = false; }
+  }, true);
+
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let motionPaused = false;
   try { motionPaused = sessionStorage.getItem("iasb-motion-paused") === "true"; } catch {}
 
   function bindReveals() {
+    const selectChapter = document.querySelector(".select-editorial");
+    if (selectChapter && "IntersectionObserver" in window) {
+      const routeObserver = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) { selectChapter.classList.add("in-view"); routeObserver.disconnect(); }
+      }, { threshold: .15 });
+      routeObserver.observe(selectChapter);
+    }
     const revealTargets = document.querySelectorAll(
       ".page-hero, .inventory-heading, .inventory-card, .section-heading, .finder-step, " +
       ".calculator-shell, .otr-shell, .profile-grid, .values-grid article, .journey-section li, " +
@@ -219,7 +250,7 @@
 
   /* Mobile action bar — Home / Stock / WhatsApp / Find / Tools */
   (function buildMobileBar() {
-    if (document.querySelector(".mobile-action-bar, .mobile-cta")) return;
+    if (document.querySelector(".mobile-action-bar, .mobile-cta, .car-detail-main")) return;
     const mobileActions = document.createElement("nav");
     mobileActions.className = "mobile-action-bar";
     mobileActions.setAttribute("aria-label", "Navigasi utama mudah alih");

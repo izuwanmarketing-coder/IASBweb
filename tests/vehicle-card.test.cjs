@@ -144,7 +144,7 @@ class FakeElement {
   }
 }
 
-async function createInventory(data, { reject = false, eventBeforeResolve = false } = {}) {
+async function createInventory(data, { reject = false, eventBeforeResolve = false, url = 'https://izuwanautomobile.com/inventory' } = {}) {
   const { window, cards } = createCards();
   const elements = new Map();
   const get = id => {
@@ -175,7 +175,11 @@ async function createInventory(data, { reject = false, eventBeforeResolve = fals
   };
   const rendered = [];
   cards.renderCard = car => { rendered.push(car.id); return `<article data-unit="${car.id}"></article>`; };
-  const context = vm.createContext({ window, document, Event });
+  window.location = new URL(url);
+  window.history = { replaceState: (_state, _title, href) => { window.location = new URL(href, window.location); } };
+  const stored = new Map();
+  const sessionStorage = { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value), removeItem: key => stored.delete(key) };
+  const context = vm.createContext({ window, document, Event, URL, URLSearchParams, sessionStorage });
   vm.runInContext(inventoryScript, context);
   const settle = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
   await settle();
@@ -375,4 +379,29 @@ test('real smooth-select script refreshes its visible label after programmatic r
   const options = created.filter(node => node.attributes.role === 'option');
   assert.equal(options[0].attributes['aria-selected'], 'true');
   assert.equal(options[1].attributes['aria-selected'], 'false');
+});
+
+
+test('shareable filters restore the same sorted results and preserve unrelated parameters', async () => {
+  const rows = [vehicle({id:'h-high',brand:'Honda',price:220000}),vehicle({id:'h-low',brand:'Honda',price:120000}),vehicle({id:'t',brand:'Toyota',price:100000})];
+  const app = await createInventory(payload(rows), {url:'https://izuwanautomobile.com/inventory?brand=Honda&sort=price-low&utm_source=review'});
+  assert.deepEqual(app.ids(), ['h-low','h-high']);
+  assert.equal(app.get('brandFilter').value,'Honda');
+  assert.equal(app.get('sortFilter').value,'price-low');
+  app.change('stockSearch','honda');
+  const url = app.window.location;
+  assert.equal(url.searchParams.get('utm_source'),'review');
+  assert.equal(url.searchParams.get('search'),'honda');
+  const restored = await createInventory(payload(rows), {url:url.href});
+  assert.deepEqual(restored.ids(),app.ids());
+  restored.get('clearFilters').emit('click');
+  assert.equal(restored.window.location.search,'?utm_source=review');
+});
+
+test('load-more depth survives return URLs and invalid filter enums fall back safely', async () => {
+  const rows = Array.from({length:30},(_,i)=>vehicle({id:String(i)}));
+  const app = await createInventory(payload(rows), {url:'https://izuwanautomobile.com/inventory?limit=24&sort=unknown&budget=oops'});
+  assert.equal(app.ids().length,24);
+  assert.equal(app.get('sortFilter').value,'latest');
+  assert.equal(app.get('budgetFilter').value,'all');
 });
