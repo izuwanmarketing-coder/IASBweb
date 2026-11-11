@@ -72,3 +72,9 @@ The hero is one integrated photographic stage with a red headline panel, immedia
 - Production release 40a51c1 pushed to main. Cloudflare Pages deployment 6fc65d99-8d12-42c8-92ce-a65d9b430a92 succeeded. Both apex and www serve the new design; /news and /api/automotive-news return 200 with 46 articles and all three sources. /api/inventory-sheet still returns 200. Live news search returns the expected Mazda3 result.
 - The separate Workers Builds check failed; the domain-serving Cloudflare Pages deployment succeeded. No hosting migration was performed.
 - Final accessibility correction: skip link uses the actual main element ID, including pages that already define their own ID.
+
+## News photography update
+
+- Added official feed enclosure thumbnails to homepage and Dunia Auto cards; 36 of the current 46 entries include a photo. Allowlisted HTTPS media hosts only, with query-entity decoding and no additional article scraping.
+- Responsive 16:9 media slots, lazy loading, source-labelled graphic fallback for missing/failed images, and reduced-motion-aware hover. Snapshot and edge cache schema refreshed.
+- 65 tests pass, public syntax/link checks and 66-file build pass. Browser confirmed real image loading, source filtering, and no horizontal overflow at 390px.

@@ -225,6 +225,16 @@ function newsText(value) {
     return point > 0 && point <= 0x10ffff ? String.fromCodePoint(point) : "";
   }).replace(/&(amp|lt|gt|quot|apos|nbsp);/g, (_, key) => ({ amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " }[key])).replace(/\s+/g, " ").trim();
 }
+function newsImage(block) {
+  for (const [tag] of block.matchAll(/<(?:enclosure|media:content|media:thumbnail)\b[^>]*>/gi)) {
+    const raw = tag.match(/\burl\s*=\s*(["'])(.*?)\1/i)?.[2];
+    try {
+      const url = new URL(newsText(raw));
+      if (url.protocol === 'https:' && !url.username && !url.password && ['global.toyota', 'toyotatimes.jp', 'news.mazdausa.com', 'mmx.prnewswire.com'].includes(url.hostname) && /\.(?:jpe?g|png|webp)(?:$|[?#])/i.test(url.href)) return url.href;
+    } catch {}
+  }
+  return '';
+}
 function parseNews(xml, source, now = Date.now()) {
   return [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)].flatMap(([, block]) => {
     const field = tag => newsText(block.match(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"))?.[1]);
@@ -233,7 +243,7 @@ function parseNews(xml, source, now = Date.now()) {
     try {
       const url = new URL(field("link"));
       if (!title || !Number.isFinite(date) || date > now + 3600000 || url.protocol !== "https:" || !source.hosts.includes(url.hostname) || url.username || url.password) return [];
-      return [{ title, url: url.href, publishedAt: new Date(date).toISOString(), source: source.name, region: source.region }];
+      return [{ title, url: url.href, publishedAt: new Date(date).toISOString(), source: source.name, region: source.region, imageUrl: newsImage(block) }];
     } catch { return []; }
   });
 }
@@ -257,7 +267,7 @@ async function collectNews(fetcher = fetch) {
   return { fetchedAt: new Date().toISOString(), partial: results.some(result => result.status === "rejected"), articles };
 }
 async function automotiveNewsResponse(request) {
-  const key = new Request(new URL("/api/automotive-news", request.url).href);
+  const key = new Request(new URL("/api/automotive-news?schema=images-v1", request.url).href);
   const cache = typeof caches !== "undefined" ? caches.default : null;
   const cached = cache ? await cache.match(key) : null;
   if (cached) return cached;
